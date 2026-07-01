@@ -49,14 +49,18 @@ class StudentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final results =
-          await _supabaseService.getExamResults(studentId);
-      _allExams = results
+      final results = _supabaseService.getExamResults(studentId);
+      final comments = _supabaseService.getTeacherComments(studentId);
+      final both = await Future.wait([results, comments]);
+      _allExams = (both[0] as List<Map<String, dynamic>>)
           .map((e) => ExamResult.fromMap(e, e['id'] as String? ?? ''))
           .toList();
-      _availableMonths = await _supabaseService.getAvailableMonths(studentId);
-      _teacherComments =
-          await _supabaseService.getTeacherComments(studentId);
+      _teacherComments = both[1] as Map<String, String>;
+      final monthSet = <String>{};
+      for (final exam in _allExams) {
+        if (exam.month.isNotEmpty) monthSet.add(exam.month);
+      }
+      _availableMonths = monthSet.toList()..sort();
     } catch (e) {
       _error = 'Failed to load results: $e';
     }

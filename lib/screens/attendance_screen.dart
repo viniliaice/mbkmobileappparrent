@@ -56,6 +56,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
           final todayRec = ap.todayRecord;
           final total = ap.summary.values.fold(0, (a, b) => a + b);
+          final recordCount = ap.records.length;
+          final headerCount = 3;
+          final totalItems = headerCount + recordCount;
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -65,47 +68,50 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 await ap.loadAttendance(ids);
               }
             },
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              children: [
-                _buildTodayCard(theme, colorScheme, todayRec),
-                const SizedBox(height: 16),
-                _buildStatsCard(theme, colorScheme, ap, total),
-                const SizedBox(height: 16),
-                Text('History', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                if (ap.records.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text('No attendance records', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
-                    ),
-                  )
-                else
-                  ...ap.records.map((r) => Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          _statusIcon(r.status, colorScheme),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(df.format(r.date), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                                Text(r.className, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                              ],
-                            ),
+              itemCount: totalItems,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return _buildTodayCard(theme, colorScheme, todayRec);
+                }
+                if (index == 1) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 16),
+                    child: _buildStatsCard(theme, colorScheme, ap, total),
+                  );
+                }
+                if (index == 2) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text('History', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  );
+                }
+                final r = ap.records[index - headerCount];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        _statusIcon(r.status, colorScheme),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(df.format(r.date), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                              Text(r.className, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                            ],
                           ),
-                          _statusBadge(r.status, colorScheme),
-                        ],
-                      ),
+                        ),
+                        _statusBadge(r.status, colorScheme),
+                      ],
                     ),
-                  )),
-              ],
+                  ),
+                );
+              },
             ),
           );
         },

@@ -21,6 +21,30 @@ class AppMessage {
     required this.createdAt,
   });
 
+  AppMessage copyWith({
+    String? id,
+    String? senderId,
+    String? senderName,
+    String? recipientId,
+    String? recipientName,
+    String? subject,
+    String? body,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
+    return AppMessage(
+      id: id ?? this.id,
+      senderId: senderId ?? this.senderId,
+      senderName: senderName ?? this.senderName,
+      recipientId: recipientId ?? this.recipientId,
+      recipientName: recipientName ?? this.recipientName,
+      subject: subject ?? this.subject,
+      body: body ?? this.body,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   factory AppMessage.fromMap(Map<String, dynamic> map) {
     final sender = map['sender'] as Map<String, dynamic>?;
     final recipient = map['recipient'] as Map<String, dynamic>?;

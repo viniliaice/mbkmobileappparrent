@@ -70,6 +70,11 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
           }
 
           final grouped = hp.groupedByStudent;
+          final sections = <dynamic>[];
+          for (final entry in grouped.entries) {
+            sections.add(entry.key);
+            sections.addAll(entry.value);
+          }
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -79,115 +84,117 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                 await hp.loadHomework(ids);
               }
             },
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              children: [
-                if (hp.overdueCount > 0)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                    ),
+              itemCount: sections.length + (hp.overdueCount > 0 ? 1 : 0),
+              itemBuilder: (context, index) {
+                int offset = 0;
+                if (hp.overdueCount > 0) {
+                  if (index == 0) {
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Text('${hp.overdueCount} overdue assignment${hp.overdueCount == 1 ? '' : 's'}',
+                              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    );
+                  }
+                  offset = 1;
+                }
+                final item = sections[index - offset];
+                if (item is String) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(
                       children: [
-                        const Icon(Icons.warning_amber_rounded, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Text('${hp.overdueCount} overdue assignment${hp.overdueCount == 1 ? '' : 's'}',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red, fontWeight: FontWeight.w600)),
+                        Container(
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(item[0].toUpperCase(),
+                                style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(item, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                       ],
                     ),
-                  ),
-                ...grouped.entries.map((entry) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36, height: 36,
-                              decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
-                                child: Text(entry.key[0].toUpperCase(),
-                                    style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold)),
-                              ),
+                  );
+                }
+                final hw = item as dynamic;
+                final overdue = hw.isOverdue;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: overdue ? BorderSide(color: Colors.red.withValues(alpha: 0.4)) : BorderSide.none,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44, height: 44,
+                            decoration: BoxDecoration(
+                              color: overdue ? Colors.red.withValues(alpha: 0.1) : colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            const SizedBox(width: 10),
-                            Text(entry.key, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                      ...entry.value.map((hw) {
-                        final overdue = hw.isOverdue;
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            side: overdue ? BorderSide(color: Colors.red.withValues(alpha: 0.4)) : BorderSide.none,
+                            child: Icon(
+                              hw.isCompleted ? Icons.check_circle : (overdue ? Icons.schedule : Icons.assignment),
+                              color: hw.isCompleted ? Colors.green : (overdue ? Colors.red : colorScheme.primary),
+                              size: 24,
+                            ),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  width: 44, height: 44,
-                                  decoration: BoxDecoration(
-                                    color: overdue ? Colors.red.withValues(alpha: 0.1) : colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    hw.isCompleted ? Icons.check_circle : (overdue ? Icons.schedule : Icons.assignment),
-                                    color: hw.isCompleted ? Colors.green : (overdue ? Colors.red : colorScheme.primary),
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(hw.title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                                      const SizedBox(height: 2),
-                                      Text('${hw.subject} · Due ${df.format(hw.dueDate)}', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                                      if (overdue)
-                                        Text('OVERDUE', style: theme.textTheme.labelSmall?.copyWith(color: Colors.red, fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: hw.isCompleted
-                                        ? Colors.green.withValues(alpha: 0.15)
-                                        : colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    hw.status,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: hw.isCompleted ? Colors.green : colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
+                                Text(hw.title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
+                                Text('${hw.subject} · Due ${df.format(hw.dueDate)}', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                                if (overdue)
+                                  Text('OVERDUE', style: theme.textTheme.labelSmall?.copyWith(color: Colors.red, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),
-                        );
-                      }),
-                      const SizedBox(height: 8),
-                    ],
-                  );
-                }),
-              ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: hw.isCompleted
+                                  ? Colors.green.withValues(alpha: 0.15)
+                                  : colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              hw.status,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: hw.isCompleted ? Colors.green : colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           );
         },

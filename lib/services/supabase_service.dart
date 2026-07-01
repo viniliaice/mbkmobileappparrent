@@ -28,11 +28,32 @@ class SupabaseService {
     return data;
   }
 
-  Future<List<Map<String, dynamic>>> getExamResults(String studentId) async {
-    final data = await client.from('exams').select('id,studentId,subject,score,total,examType,month,status,parentId,date,teacherId').eq('studentId', studentId).order('date', ascending: false);
+  static const int _examDefaultStart = 0;
+  static const int _examDefaultEnd = 399;
+  static const int _msgDefaultStart = 0;
+  static const int _msgDefaultEnd = 29;
+  static const int _annDefaultStart = 0;
+  static const int _annDefaultEnd = 29;
+
+  Future<List<Map<String, dynamic>>> getExamResults(
+    String studentId, {
+    int rangeStart = _examDefaultStart,
+    int rangeEnd = _examDefaultEnd,
+  }) async {
+    final data = await client
+        .from('exams')
+        .select('id,studentId,subject,score,total,examType,month,status,parentId,date,teacherId')
+        .eq('studentId', studentId)
+        .order('date', ascending: false)
+        .range(rangeStart, rangeEnd);
     return data;
   }
 
+  /// Returns the distinct months for [studentId].
+  ///
+  /// Kept for backwards compatibility / debugging. Prefer deriving
+  /// months client-side from the results of [getExamResults] (one less round-trip).
+  @Deprecated('Derive months client-side from getExamResults() results.')
   Future<List<String>> getAvailableMonths(String studentId) async {
     final data = await client.from('exams').select('month').eq('studentId', studentId).order('month', ascending: true);
     final months = (data as List<dynamic>)
@@ -57,18 +78,33 @@ class SupabaseService {
     return comments;
   }
 
-  Future<List<Map<String, dynamic>>> getAnnouncements(List<String> classNames) async {
-    final data = await client.from('announcements').select('id,className,message,createdBy,createdAt').inFilter('className', classNames).order('createdAt', ascending: false);
+  Future<List<Map<String, dynamic>>> getAnnouncements(
+    List<String> classNames, {
+    int rangeStart = _annDefaultStart,
+    int rangeEnd = _annDefaultEnd,
+  }) async {
+    final data = await client
+        .from('announcements')
+        .select('id,className,message,createdBy,createdAt')
+        .inFilter('className', classNames)
+        .order('createdAt', ascending: false)
+        .range(rangeStart, rangeEnd);
     return data;
   }
 
-  Future<List<Map<String, dynamic>>> getMessages(String userId, {bool inbox = true}) async {
+  Future<List<Map<String, dynamic>>> getMessages(
+    String userId, {
+    bool inbox = true,
+    int rangeStart = _msgDefaultStart,
+    int rangeEnd = _msgDefaultEnd,
+  }) async {
     final column = inbox ? 'recipientId' : 'senderId';
     final data = await client
         .from('messages')
         .select('id,senderId,recipientId,subject,body,readAt,createdAt,sender:users!senderId(name),recipient:users!recipientId(name)')
         .eq(column, userId)
-        .order('createdAt', ascending: false);
+        .order('createdAt', ascending: false)
+        .range(rangeStart, rangeEnd);
     return data;
   }
 
@@ -132,5 +168,25 @@ class SupabaseService {
   Future<String?> getSenderName(String senderId) async {
     final data = await client.from('users').select('name').eq('id', senderId).maybeSingle();
     return data?['name'] as String?;
+  }
+
+  /// Bulk-resolves sender names for a list of user ids.
+  ///
+  /// Used to seed [MessageProvider]'s sender-name cache without
+  /// incurring one round-trip per id (N+1 avoidance on the realtime path).
+  Future<Map<String, String>> getSenderNamesByIds(List<String> ids) async {
+    if (ids.isEmpty) return {};
+    final data = await client
+        .from('users')
+        .select('id,name')
+        .inFilter('id', ids);
+    final map = <String, String>{};
+    for (final row in (data as List<dynamic>)) {
+      final entry = row as Map<String, dynamic>;
+      final id = entry['id'] as String?;
+      final name = entry['name'] as String?;
+      if (id != null && name != null) map[id] = name;
+    }
+    return map;
   }
 }

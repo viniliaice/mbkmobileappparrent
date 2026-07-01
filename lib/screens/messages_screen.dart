@@ -109,8 +109,9 @@ class _MessageList extends StatelessWidget {
       builder: (context, mp, _) {
         final loading = inbox ? mp.loadingInbox : mp.loadingSent;
         final messages = inbox ? mp.inbox : mp.sent;
+        final hasMore = inbox ? mp.hasMoreInbox : false;
 
-        if (loading) {
+        if (loading && messages.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -143,8 +144,26 @@ class _MessageList extends StatelessWidget {
           },
           child: ListView.builder(
             padding: const EdgeInsets.all(12),
-            itemCount: messages.length,
+            itemCount: messages.length + (inbox && hasMore ? 1 : 0),
             itemBuilder: (context, index) {
+              if (inbox && hasMore && index == messages.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Center(
+                    child: mp.loadingInbox
+                        ? const CircularProgressIndicator()
+                        : TextButton(
+                            onPressed: () {
+                              final auth = context.read<AuthProvider>();
+                              if (auth.user != null) {
+                                mp.loadMoreInbox(auth.user!.id);
+                              }
+                            },
+                            child: const Text('Load more'),
+                          ),
+                  ),
+                );
+              }
               final m = messages[index];
               final df = DateFormat('MMM dd');
               return Card(

@@ -38,10 +38,17 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await _supabase.getAttendanceByStudentIds(studentIds);
-      _records = data.map((e) => AttendanceRecord.fromMap(e)).toList();
+      final dataFuture = _supabase.getAttendanceByStudentIds(studentIds);
       if (studentIds.length == 1) {
-        _summary = await _supabase.getAttendanceSummary(studentIds.first);
+        final summaryFuture = _supabase.getAttendanceSummary(studentIds.first);
+        final both = await Future.wait([dataFuture, summaryFuture]);
+        _records = (both[0] as List<Map<String, dynamic>>)
+            .map((e) => AttendanceRecord.fromMap(e))
+            .toList();
+        _summary = both[1] as Map<String, int>;
+      } else {
+        final data = await dataFuture;
+        _records = data.map((e) => AttendanceRecord.fromMap(e)).toList();
       }
     } catch (e) {
       _error = 'Failed to load attendance.';

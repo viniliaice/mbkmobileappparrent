@@ -34,7 +34,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       appBar: AppBar(title: const Text('Announcements')),
       body: Consumer<AnnouncementProvider>(
         builder: (context, ap, _) {
-          if (ap.loading) {
+          if (ap.loading && ap.announcements.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
           if (ap.error != null) {
@@ -77,8 +77,21 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
             },
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: ap.announcements.length,
+              itemCount: ap.announcements.length + (ap.hasMore ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index == ap.announcements.length) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: ap.loading
+                          ? const CircularProgressIndicator()
+                          : TextButton(
+                              onPressed: () => ap.loadMore(),
+                              child: const Text('Load more'),
+                            ),
+                    ),
+                  );
+                }
                 final a = ap.announcements[index];
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),

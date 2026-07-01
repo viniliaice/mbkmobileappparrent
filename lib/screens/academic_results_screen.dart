@@ -240,6 +240,10 @@ class _MonthlyTab extends StatelessWidget {
 
         final effectiveMonth = selectedMonth ?? months.first;
 
+        final capNotice = sp.allExams.length >= 400
+            ? 'Showing up to 400 exam records'
+            : null;
+
         return RefreshIndicator(
           onRefresh: () => sp.loadStudentData(student.id),
           child: CustomScrollView(
@@ -280,6 +284,24 @@ class _MonthlyTab extends StatelessWidget {
                           },
                         ),
                       ),
+                      if (capNotice != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.info_outline, size: 14, color: colorScheme.onSurfaceVariant),
+                              const SizedBox(width: 6),
+                              Text(capNotice, style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       _buildAverageBanner(
                           theme, colorScheme, sp, effectiveMonth),

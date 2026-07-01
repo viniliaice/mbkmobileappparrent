@@ -6,9 +6,12 @@ import 'providers/announcement_provider.dart';
 import 'providers/message_provider.dart';
 import 'providers/attendance_provider.dart';
 import 'providers/homework_provider.dart';
+import 'learning/provider.dart';
+import 'math/providers/math_provider.dart';
 import 'screens/login_screen.dart';
-import 'screens/dashboard_screen.dart';
+import 'widgets/app_shell.dart';
 import 'services/supabase_service.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,15 +34,15 @@ class MBKParentPortalApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MessageProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => HomeworkProvider()),
+        ChangeNotifierProvider(create: (_) => LearningProvider()),
+        ChangeNotifierProvider(create: (_) => MathProvider()),
       ],
       child: MaterialApp(
         title: 'MBK Parent Portal',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: const Color(0xFF1565C0),
-          brightness: Brightness.light,
-        ),
+        theme: lightTheme(),
+        darkTheme: darkTheme(),
+        themeMode: ThemeMode.system,
         home: const SplashScreen(),
       ),
     );
@@ -68,7 +71,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (auth.status == AuthStatus.authenticated) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        MaterialPageRoute(builder: (_) => const AppShell()),
       );
     } else {
       Navigator.of(context).pushReplacement(
