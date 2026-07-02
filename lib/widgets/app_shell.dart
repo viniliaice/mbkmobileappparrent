@@ -26,38 +26,47 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: const [
-        DashboardScreen(),
-        MessagesScreen(),
-        _LearningScreen(),
-        _ResultsScreen(),
-      ]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _onTap,
-        animationDuration: const Duration(milliseconds: 300),
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-        height: 72,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
+      body: Column(
+        children: [
+          Expanded(
+            child: IndexedStack(index: _currentIndex, children: const [
+              DashboardScreen(),
+              MessagesScreen(),
+              _LearningScreen(),
+              _ResultsScreen(),
+            ]),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.email_outlined),
-            selectedIcon: Icon(Icons.email_rounded),
-            label: 'Messages',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_stories_outlined),
-            selectedIcon: Icon(Icons.auto_stories_rounded),
-            label: 'Learning',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart_rounded),
-            label: 'Results',
+          SafeArea(
+            top: false,
+            child: NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: _onTap,
+              animationDuration: const Duration(milliseconds: 300),
+              labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+              height: 60,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.email_outlined),
+                  selectedIcon: Icon(Icons.email_rounded),
+                  label: 'Messages',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.auto_stories_outlined),
+                  selectedIcon: Icon(Icons.auto_stories_rounded),
+                  label: 'Learning',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.bar_chart_outlined),
+                  selectedIcon: Icon(Icons.bar_chart_rounded),
+                  label: 'Results',
+                ),
+              ],
+            ),
           ),
         ],
       ),

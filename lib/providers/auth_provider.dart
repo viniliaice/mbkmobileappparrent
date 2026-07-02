@@ -39,6 +39,7 @@ class AuthProvider extends ChangeNotifier {
       _error = e.message;
       _status = AuthStatus.unauthenticated;
     } catch (e) {
+      debugPrint('LOGIN_ERROR: $e');
       _error = 'Login failed. Check your credentials.';
       _status = AuthStatus.unauthenticated;
     }

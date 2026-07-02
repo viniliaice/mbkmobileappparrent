@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../constants/app_constants.dart';
-import 'dashboard_screen.dart';
+import '../widgets/app_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,8 +37,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (authProvider.status == AuthStatus.authenticated) {
+      FocusScope.of(context).unfocus();
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        MaterialPageRoute(builder: (_) => const AppShell()),
       );
     } else if (authProvider.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
