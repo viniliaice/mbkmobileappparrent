@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/student.dart';
+import '../../widgets/responsive_content.dart';
 import 'topic_screen.dart';
 
 class SubjectSelectionScreen extends StatelessWidget {
@@ -14,8 +15,7 @@ class SubjectSelectionScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text('${student.name}\'s Learning')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: ResponsiveContent(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

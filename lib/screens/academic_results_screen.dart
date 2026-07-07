@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../constants/app_strings.dart';
 import '../models/student.dart';
 import '../models/subject_summary.dart';
 import '../providers/student_provider.dart';
+import '../theme/aurora_background.dart';
+import '../widgets/aurora_card.dart';
+import '../widgets/responsive_content.dart';
 
 class AcademicResultsScreen extends StatefulWidget {
   final Student student;
@@ -40,113 +44,114 @@ class _AcademicResultsScreenState extends State<AcademicResultsScreen>
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      body: Consumer<StudentProvider>(
-        builder: (context, sp, _) {
-          return NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [
-              SliverAppBar(
-                expandedHeight: 200,
-                pinned: true,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: _buildStudentHeader(theme, colorScheme),
+      body: AuroraBackground(
+        child: SafeArea(
+          bottom: false,
+          child: ResponsiveContent(
+            child: Column(
+              children: [
+              _buildHeader(theme, colorScheme),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: theme.brightness == Brightness.dark
+                        ? const Color(0xFF141D3A).withValues(alpha: 0.6)
+                        : Colors.white.withValues(alpha: 0.6),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicator: ShapeDecoration(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      color: colorScheme.primary.withValues(alpha: 0.15),
+                    ),
+                    indicatorWeight: 0,
+                    dividerColor: Colors.transparent,
+                    labelColor: colorScheme.primary,
+                    unselectedLabelColor: colorScheme.onSurfaceVariant,
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    tabs: const [
+                      Tab(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.calendar_month_outlined, size: 18),
+                            SizedBox(width: 6),
+                            Text(AppStrings.monthly),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.book_outlined, size: 18),
+                            SizedBox(width: 6),
+                            Text(AppStrings.midterm),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.workspace_premium_outlined, size: 18),
+                            SizedBox(width: 6),
+                            Text(AppStrings.finalTerm),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                bottom: TabBar(
-                  controller: _tabController,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: ShapeDecoration(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    color: colorScheme.primaryContainer,
-                  ),
-                  indicatorWeight: 0,
-                  dividerColor: Colors.transparent,
-                  labelColor: colorScheme.onPrimaryContainer,
-                  unselectedLabelColor: colorScheme.onSurfaceVariant,
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                  tabs: const [
-                    Tab(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.calendar_month_outlined, size: 18),
-                          SizedBox(width: 6),
-                          Text('Monthly'),
-                        ],
-                      ),
-                    ),
-                    Tab(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.book_outlined, size: 18),
-                          SizedBox(width: 6),
-                          Text('Midterm'),
-                        ],
-                      ),
-                    ),
-                    Tab(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.workspace_premium_outlined, size: 18),
-                          SizedBox(width: 6),
-                          Text('Final'),
-                        ],
-                      ),
-                    ),
-                  ],
+              ),
+              Expanded(
+                child: Consumer<StudentProvider>(
+                  builder: (context, sp, _) {
+                    return TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _MonthlyTab(
+                          student: widget.student,
+                          selectedMonth: _selectedMonth,
+                          onMonthChanged: (m) {
+                            setState(() => _selectedMonth = m);
+                          },
+                        ),
+                        _MidtermTab(student: widget.student),
+                        _FinalTab(student: widget.student),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _MonthlyTab(
-                  student: widget.student,
-                  selectedMonth: _selectedMonth,
-                  onMonthChanged: (m) {
-                    setState(() {
-                      _selectedMonth = m;
-                    });
-                  },
-                ),
-                _MidtermTab(student: widget.student),
-                _FinalTab(student: widget.student),
-              ],
-            ),
-          );
-        },
+          ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildStudentHeader(ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildHeader(ThemeData theme, ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 80, 20, 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            colorScheme.primary.withValues(alpha: 0.75),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
       child: Row(
         children: [
           Container(
-            width: 64,
-            height: 64,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: colorScheme.onPrimary.withValues(alpha: 0.2),
+              color: colorScheme.primary.withValues(alpha: 0.12),
               border: Border.all(
-                color: colorScheme.onPrimary.withValues(alpha: 0.4),
+                color: colorScheme.primary.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
@@ -154,51 +159,39 @@ class _AcademicResultsScreenState extends State<AcademicResultsScreen>
               child: Text(
                 widget.student.name.isNotEmpty
                     ? widget.student.name[0].toUpperCase()
-                    : '?',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: colorScheme.onPrimary,
+                    : AppStrings.unknown,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: colorScheme.primary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   widget.student.name,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: colorScheme.onPrimary,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.student.className,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onPrimary.withValues(alpha: 0.85),
-                  ),
-                ),
                 const SizedBox(height: 2),
                 Text(
-                  'Academic Year 2025-2026',
+                  widget.student.className,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onPrimary.withValues(alpha: 0.7),
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: Icon(
-              Icons.close,
-              color: colorScheme.onPrimary,
-            ),
+            icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -225,184 +218,101 @@ class _MonthlyTab extends StatelessWidget {
 
     return Consumer<StudentProvider>(
       builder: (context, sp, _) {
-        if (sp.loadingExams) {
-          return _loadingState(theme);
-        }
+        if (sp.loadingExams) return _loadingState(theme);
 
-        if (sp.error != null) {
-          return _errorState(theme, colorScheme, sp.error!);
-        }
+        if (sp.error != null) return _errorState(theme, colorScheme, sp.error!);
 
         final months = sp.availableMonths;
         if (months.isEmpty) {
-          return _emptyState(theme, colorScheme, 'No monthly exam data available');
+          return _emptyState(theme, colorScheme, AppStrings.noMonthlyData);
         }
 
         final effectiveMonth = selectedMonth ?? months.first;
 
         final capNotice = sp.allExams.length >= 400
-            ? 'Showing up to 400 exam records'
+            ? AppStrings.showing400Records
             : null;
 
         return RefreshIndicator(
           onRefresh: () => sp.loadStudentData(student.id),
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: 42,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: months.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            final m = months[index];
-                            final isSelected = m == effectiveMonth;
-                            return FilterChip(
-                              label: Text(_monthLabel(m)),
-                              selected: isSelected,
-                              onSelected: (_) => onMonthChanged(m),
-                              showCheckmark: false,
-                              selectedColor: colorScheme.primary,
-                              labelStyle: TextStyle(
-                                color: isSelected
-                                    ? colorScheme.onPrimary
-                                    : colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            );
-                          },
-                        ),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              SizedBox(
+                height: 42,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: months.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final m = months[index];
+                    final isSelected = m == effectiveMonth;
+                    return FilterChip(
+                      label: Text(_monthLabel(m)),
+                      selected: isSelected,
+                      onSelected: (_) => onMonthChanged(m),
+                      showCheckmark: false,
+                      selectedColor: colorScheme.primary,
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
-                      if (capNotice != null) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.info_outline, size: 14, color: colorScheme.onSurfaceVariant),
-                              const SizedBox(width: 6),
-                              Text(capNotice, style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      _buildAverageBanner(
-                          theme, colorScheme, sp, effectiveMonth),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    );
+                  },
                 ),
               ),
-              _buildSubjectList(sp, effectiveMonth, theme, colorScheme),
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+              if (capNotice != null) ...[
+                const SizedBox(height: 8),
+                _infoChip(theme, colorScheme, capNotice),
+              ],
+              const SizedBox(height: 16),
+              _buildAverageBanner(theme, colorScheme, sp, effectiveMonth),
+              const SizedBox(height: 16),
+              ..._buildSubjectList(sp, effectiveMonth, theme, colorScheme),
+              const SizedBox(height: 32),
             ],
           ),
         );
-        },
-      );
+      },
+    );
   }
 
   Widget _buildAverageBanner(ThemeData theme, ColorScheme colorScheme,
       StudentProvider sp, String month) {
     final summaries = sp.getMonthlySummary(month);
     if (summaries.isEmpty) return const SizedBox.shrink();
-    final avg = summaries.fold<double>(
-            0, (sum, s) => sum + s.combinedPercent) /
+    final avg = summaries.fold<double>(0, (sum, s) => sum + s.combinedPercent) /
         summaries.length;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _scoreColor(avg, colorScheme).withValues(alpha: 0.15),
-            _scoreColor(avg, colorScheme).withValues(alpha: 0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _scoreColor(avg, colorScheme).withValues(alpha: 0.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.trending_up_rounded,
-            color: _scoreColor(avg, colorScheme),
-            size: 28,
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Monthly Average',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '${avg.toStringAsFixed(1)}%',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: _scoreColor(avg, colorScheme),
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          _GradeBadge(grade: _gradeFromPercent(avg), colorScheme: colorScheme),
-        ],
-      ),
-    );
+    return _scoreBanner(theme, colorScheme, AppStrings.monthlyAverage, avg,
+        Icons.trending_up_rounded, _scoreColor(avg, colorScheme));
   }
 
-  Widget _buildSubjectList(StudentProvider sp, String month,
+  List<Widget> _buildSubjectList(StudentProvider sp, String month,
       ThemeData theme, ColorScheme colorScheme) {
     final summaries = sp.getMonthlySummary(month);
     if (summaries.isEmpty) {
-      return SliverFillRemaining(
-        child: _emptyState(
-            theme, colorScheme, 'No results for this month'),
-      );
+      return [
+        _emptyState(theme, colorScheme, AppStrings.noResultsThisMonth)
+      ];
     }
-    return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final s = summaries[index];
-          final comment = sp.teacherComments[s.subject];
-          return _SubjectResultCard(
-            summary: s,
-            teacherComment: comment,
-            colorScheme: colorScheme,
-            theme: theme,
-          );
-        },
-        childCount: summaries.length,
-      ),
-    );
+    return summaries.map((s) {
+      final comment = sp.teacherComments[s.subject];
+      return _SubjectResultCard(
+        summary: s,
+        teacherComment: comment,
+        colorScheme: colorScheme,
+        theme: theme,
+      );
+    }).toList();
   }
 
-  String _monthLabel(String month) {
-    return 'Month $month';
-  }
+  String _monthLabel(String month) => AppStrings.monthLabel(month);
 }
 
 class _MidtermTab extends StatelessWidget {
@@ -422,46 +332,29 @@ class _MidtermTab extends StatelessWidget {
 
         final summaries = sp.getMidtermSummary();
         if (summaries.isEmpty) {
-          return _emptyState(
-              theme, colorScheme, 'No midterm results available');
+          return _emptyState(theme, colorScheme, AppStrings.noMidtermData);
         }
 
-        final avg = summaries.fold<double>(
-                0, (sum, s) => sum + s.combinedPercent) /
+        final avg = summaries.fold<double>(0, (sum, s) => sum + s.combinedPercent) /
             summaries.length;
 
         return RefreshIndicator(
           onRefresh: () => sp.loadStudentData(student.id),
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Column(
-                    children: [
-                      _buildMidtermBanner(theme, colorScheme, avg),
-                      const SizedBox(height: 12),
-                      _buildLegend(theme, colorScheme),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final s = summaries[index];
-                    return _SubjectResultCard(
-                      summary: s,
-                      colorScheme: colorScheme,
-                      theme: theme,
-                      showPosition: true,
-                    );
-                  },
-                  childCount: summaries.length,
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              _scoreBanner(theme, colorScheme, AppStrings.midtermAverage, avg,
+                  Icons.assignment_turned_in, colorScheme.tertiary),
+              const SizedBox(height: 12),
+              _buildLegend(theme, colorScheme, colorScheme.tertiary),
+              const SizedBox(height: 8),
+              ...summaries.map((s) => _SubjectResultCard(
+                    summary: s,
+                    colorScheme: colorScheme,
+                    theme: theme,
+                    showPosition: true,
+                  )),
+              const SizedBox(height: 32),
             ],
           ),
         );
@@ -469,52 +362,13 @@ class _MidtermTab extends StatelessWidget {
     );
   }
 
-  Widget _buildMidtermBanner(
-      ThemeData theme, ColorScheme colorScheme, double avg) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.tertiary.withValues(alpha: 0.15),
-            colorScheme.tertiary.withValues(alpha: 0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.tertiary.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.assignment_turned_in, color: colorScheme.tertiary, size: 28),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Midterm Average',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.onSurfaceVariant)),
-              Text('${avg.toStringAsFixed(1)}%',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: _scoreColor(avg, colorScheme))),
-            ],
-          ),
-          const Spacer(),
-          _GradeBadge(
-              grade: _gradeFromPercent(avg), colorScheme: colorScheme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegend(ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildLegend(
+      ThemeData theme, ColorScheme colorScheme, Color examColor) {
     return Row(
       children: [
-        _legendItem('CA (50%)', colorScheme.primary, theme),
+        _legendItem(AppStrings.ca50, colorScheme.primary, theme),
         const SizedBox(width: 16),
-        _legendItem('Exam (50%)', colorScheme.tertiary, theme),
+        _legendItem(AppStrings.exam50, examColor, theme),
       ],
     );
   }
@@ -524,7 +378,8 @@ class _MidtermTab extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 10, height: 10,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
@@ -551,50 +406,35 @@ class _FinalTab extends StatelessWidget {
 
         final summaries = sp.getFinalSummary();
         if (summaries.isEmpty) {
-          return _emptyState(theme, colorScheme, 'No final results available');
+          return _emptyState(theme, colorScheme, AppStrings.noFinalData);
         }
 
-        final avg = summaries.fold<double>(
-                0, (sum, s) => sum + s.combinedPercent) /
+        final avg = summaries.fold<double>(0, (sum, s) => sum + s.combinedPercent) /
             summaries.length;
-        final overallAvg = summaries.fold<double>(
-                0, (sum, s) => sum + s.overallAverage) /
+        final overallAvg = summaries.fold<double>(0, (sum, s) => sum + s.overallAverage) /
             summaries.length;
 
         return RefreshIndicator(
           onRefresh: () => sp.loadStudentData(student.id),
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildFinalBanner(
-                          theme, colorScheme, avg, overallAvg),
-                      const SizedBox(height: 12),
-                      _buildLegend(theme, colorScheme),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final s = summaries[index];
-                    return _SubjectResultCard(
-                      summary: s,
-                      colorScheme: colorScheme,
-                      theme: theme,
-                      showPosition: true,
-                      isFinal: true,
-                    );
-                  },
-                  childCount: summaries.length,
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              _FinalBanner(
+                  theme: theme,
+                  colorScheme: colorScheme,
+                  avg: avg,
+                  overallAvg: overallAvg),
+              const SizedBox(height: 12),
+              _buildLegend(theme, colorScheme),
+              const SizedBox(height: 8),
+              ...summaries.map((s) => _SubjectResultCard(
+                    summary: s,
+                    colorScheme: colorScheme,
+                    theme: theme,
+                    showPosition: true,
+                    isFinal: true,
+                  )),
+              const SizedBox(height: 32),
             ],
           ),
         );
@@ -602,29 +442,59 @@ class _FinalTab extends StatelessWidget {
     );
   }
 
-  Widget _buildFinalBanner(ThemeData theme, ColorScheme colorScheme,
-      double avg, double overallAvg) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.amber.withValues(alpha: 0.2),
-            Colors.amber.withValues(alpha: 0.05),
-          ],
+  Widget _buildLegend(ThemeData theme, ColorScheme colorScheme) {
+    return Row(
+      children: [
+        _legendItem(AppStrings.ca50, colorScheme.primary, theme),
+        const SizedBox(width: 16),
+        _legendItem(AppStrings.exam50, Colors.amber.shade700, theme),
+      ],
+    );
+  }
+
+  Widget _legendItem(String label, Color color, ThemeData theme) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-      ),
+        const SizedBox(width: 4),
+        Text(label, style: theme.textTheme.labelSmall),
+      ],
+    );
+  }
+}
+
+class _FinalBanner extends StatelessWidget {
+  final ThemeData theme;
+  final ColorScheme colorScheme;
+  final double avg;
+  final double overallAvg;
+
+  const _FinalBanner({
+    required this.theme,
+    required this.colorScheme,
+    required this.avg,
+    required this.overallAvg,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AuroraCard(
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Icon(Icons.emoji_events_rounded, color: Colors.amber.shade700, size: 28),
+          Icon(Icons.emoji_events_rounded,
+              color: Colors.amber.shade700, size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Final Average',
+                Text(AppStrings.finalAverage,
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: colorScheme.onSurfaceVariant)),
                 Text('${avg.toStringAsFixed(1)}%',
@@ -637,7 +507,7 @@ class _FinalTab extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Overall',
+              Text(AppStrings.overall,
                   style: theme.textTheme.labelSmall
                       ?.copyWith(color: colorScheme.onSurfaceVariant)),
               Text('${overallAvg.toStringAsFixed(1)}%',
@@ -647,34 +517,9 @@ class _FinalTab extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 12),
-          _GradeBadge(
-              grade: _gradeFromPercent(avg), colorScheme: colorScheme),
+          _GradeBadge(grade: _gradeFromPercent(avg), colorScheme: colorScheme),
         ],
       ),
-    );
-  }
-
-  Widget _buildLegend(ThemeData theme, ColorScheme colorScheme) {
-    return Row(
-      children: [
-        _legendItem('CA (50%)', colorScheme.primary, theme),
-        const SizedBox(width: 16),
-        _legendItem('Exam (50%)', Colors.amber.shade700, theme),
-      ],
-    );
-  }
-
-  Widget _legendItem(String label, Color color, ThemeData theme) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10, height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: theme.textTheme.labelSmall),
-      ],
     );
   }
 }
@@ -699,89 +544,68 @@ class _SubjectResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      summary.subject,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: AuroraCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(summary.subject,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  _GradeBadge(
-                    grade: summary.grade,
-                    colorScheme: colorScheme,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              _buildScoreRow(
-                'CA',
-                summary.caPercent,
+                    fontWeight: FontWeight.w700,
+                  )),
+                ),
+                _GradeBadge(grade: summary.grade, colorScheme: colorScheme),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _buildScoreRow(AppStrings.ca, summary.caPercent,
                 summary.caTotal > 0
                     ? '${summary.caScore.toStringAsFixed(0)} / ${summary.caTotal.toStringAsFixed(0)}'
                     : '-',
-                colorScheme.primary,
-              ),
-              const SizedBox(height: 10),
-              _buildScoreRow(
-                isFinal ? 'Final Exam' : showPosition ? 'Midterm Exam' : 'Monthly Exam',
+                colorScheme.primary),
+            const SizedBox(height: 10),
+            _buildScoreRow(
+                isFinal ? AppStrings.finalExam : showPosition ? AppStrings.midtermExam : AppStrings.monthlyExam,
                 summary.examPercent,
                 summary.examTotal > 0
                     ? '${summary.examScore.toStringAsFixed(0)} / ${summary.examTotal.toStringAsFixed(0)}'
                     : '-',
-                isFinal ? Colors.amber.shade700 : colorScheme.tertiary,
-              ),
-              const SizedBox(height: 10),
-              _buildTotalRow(summary),
-              if (summary.position != null && showPosition) ...[
-                const SizedBox(height: 8),
-                _positionBadge(summary.position!),
-              ],
-              if (teacherComment != null && teacherComment!.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.chat_bubble_outline, size: 14,
-                          color: colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          teacherComment!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                isFinal ? Colors.amber.shade700 : colorScheme.tertiary),
+            const SizedBox(height: 10),
+            _buildTotalRow(summary),
+            if (summary.position != null && showPosition) ...[
+              const SizedBox(height: 8),
+              _positionBadge(summary.position!),
             ],
-          ),
+            if (teacherComment != null && teacherComment!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.chat_bubble_outline,
+                        size: 14, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(teacherComment!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      )),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -795,20 +619,16 @@ class _SubjectResultCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              detail,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
-              ),
-            ),
+            Text(label,
+                style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            )),
+            Text(detail,
+                style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            )),
           ],
         ),
         const SizedBox(height: 6),
@@ -818,9 +638,7 @@ class _SubjectResultCard extends StatelessWidget {
             value: percent / 100,
             minHeight: 8,
             backgroundColor: colorScheme.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation(
-              _scoreColor(percent, colorScheme),
-            ),
+            valueColor: AlwaysStoppedAnimation(_scoreColor(percent, colorScheme)),
           ),
         ),
       ],
@@ -835,19 +653,15 @@ class _SubjectResultCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Total',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              '${totalPercent.toStringAsFixed(1)}%',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: _scoreColor(totalPercent, colorScheme),
-              ),
-            ),
+            Text(AppStrings.total,
+                style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            )),
+            Text('${totalPercent.toStringAsFixed(1)}%',
+                style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: _scoreColor(totalPercent, colorScheme),
+            )),
           ],
         ),
         const SizedBox(height: 6),
@@ -857,9 +671,7 @@ class _SubjectResultCard extends StatelessWidget {
             value: totalPercent / 100,
             minHeight: 10,
             backgroundColor: colorScheme.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation(
-              _scoreColor(totalPercent, colorScheme),
-            ),
+            valueColor: AlwaysStoppedAnimation(_scoreColor(totalPercent, colorScheme)),
           ),
         ),
       ],
@@ -881,27 +693,27 @@ class _SubjectResultCard extends StatelessWidget {
           Icon(
             position <= 3 ? Icons.emoji_events : Icons.sort,
             size: 14,
-            color: position <= 3 ? Colors.amber.shade700 : colorScheme.onSurfaceVariant,
+            color: position <= 3
+                ? Colors.amber.shade700
+                : colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 4),
-          Text(
-            'Position: $position${_ordinal(position)}',
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(AppStrings.positionLabel(position, _ordinal(position)),
+              style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          )),
         ],
       ),
     );
   }
 
   String _ordinal(int n) {
-    if (n >= 11 && n <= 13) return 'th';
+    if (n >= 11 && n <= 13) return AppStrings.ordinalDefault;
     switch (n % 10) {
-      case 1: return 'st';
-      case 2: return 'nd';
-      case 3: return 'rd';
-      default: return 'th';
+      case 1: return AppStrings.ordinalFirst;
+      case 2: return AppStrings.ordinalSecond;
+      case 3: return AppStrings.ordinalThird;
+      default: return AppStrings.ordinalDefault;
     }
   }
 }
@@ -915,37 +727,84 @@ class _GradeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color color;
-    switch (grade) {
-      case 'A+':
-      case 'A':
-        color = Colors.green;
-      case 'B+':
-      case 'B':
-        color = Colors.blue;
-      case 'C+':
-      case 'C':
-        color = Colors.orange;
-      case 'D':
-        color = Colors.deepOrange;
-      default:
-        color = Colors.red;
-    }
+  switch (grade) {
+    case AppStrings.gradeAPlus:
+    case AppStrings.gradeA:
+      color = Colors.green;
+    case AppStrings.gradeBPlus:
+    case AppStrings.gradeB:
+      color = Colors.blue;
+    case AppStrings.gradeCPlus:
+    case AppStrings.gradeC:
+      color = Colors.orange;
+    case AppStrings.gradeD:
+      color = Colors.deepOrange;
+    default:
+      color = Colors.red;
+  }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        grade,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-      ),
+      child: Text(grade,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          )),
     );
   }
+}
+
+Widget _scoreBanner(ThemeData theme, ColorScheme colorScheme, String label,
+    double avg, IconData icon, Color color) {
+  return AuroraCard(
+    padding: const EdgeInsets.all(16),
+    child: Row(
+      children: [
+        Icon(icon, color: color, size: 28),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 2),
+            Text('${avg.toStringAsFixed(1)}%',
+                style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: _scoreColor(avg, colorScheme),
+            )),
+          ],
+        ),
+        const Spacer(),
+        _GradeBadge(grade: _gradeFromPercent(avg), colorScheme: colorScheme),
+      ],
+    ),
+  );
+}
+
+Widget _infoChip(ThemeData theme, ColorScheme colorScheme, String text) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.info_outline, size: 14, color: colorScheme.onSurfaceVariant),
+        const SizedBox(width: 6),
+        Text(text,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: colorScheme.onSurfaceVariant)),
+      ],
+    ),
+  );
 }
 
 Color _scoreColor(double percent, ColorScheme colorScheme) {
@@ -955,13 +814,13 @@ Color _scoreColor(double percent, ColorScheme colorScheme) {
 }
 
 String _gradeFromPercent(double percent) {
-  if (percent >= 90) return 'A+';
-  if (percent >= 80) return 'A';
-  if (percent >= 70) return 'B+';
-  if (percent >= 60) return 'B';
-  if (percent >= 50) return 'C';
-  if (percent >= 40) return 'D';
-  return 'F';
+  if (percent >= 90) return AppStrings.gradeAPlus;
+  if (percent >= 80) return AppStrings.gradeA;
+  if (percent >= 70) return AppStrings.gradeBPlus;
+  if (percent >= 60) return AppStrings.gradeB;
+  if (percent >= 50) return AppStrings.gradeC;
+  if (percent >= 40) return AppStrings.gradeD;
+  return AppStrings.gradeF;
 }
 
 Widget _loadingState(ThemeData theme) {
@@ -971,7 +830,7 @@ Widget _loadingState(ThemeData theme) {
       children: [
         CircularProgressIndicator(),
         const SizedBox(height: 16),
-        Text('Loading results...',
+        Text(AppStrings.loadingResults,
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ],

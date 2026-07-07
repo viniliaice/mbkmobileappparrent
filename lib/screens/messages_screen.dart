@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import '../providers/message_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/supabase_service.dart';
+import '../theme/aurora_background.dart';
+import '../widgets/aurora_card.dart';
+import '../widgets/aurora_button.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -39,9 +42,7 @@ class _MessagesScreenState extends State<MessagesScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => const _ComposeSheet(),
     );
   }
@@ -49,48 +50,103 @@ class _MessagesScreenState extends State<MessagesScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Consumer<MessageProvider>(
-              builder: (_, mp, _) => Tab(
+      body: AuroraBackground(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Inbox'),
-                    if (mp.unreadCount > 0) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.error,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text('${mp.unreadCount}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text('Messages',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    )),
+                    const Spacer(),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                    ],
+                      child: IconButton(
+                        icon: Icon(Icons.edit_outlined,
+                            color: colorScheme.primary),
+                        onPressed: () => _composeMessage(context),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-            const Tab(text: 'Sent'),
-          ],
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: theme.brightness == Brightness.dark
+                        ? const Color(0xFF141D3A).withValues(alpha: 0.6)
+                        : Colors.white.withValues(alpha: 0.6),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicator: ShapeDecoration(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      color: colorScheme.primary.withValues(alpha: 0.15),
+                    ),
+                    indicatorWeight: 0,
+                    dividerColor: Colors.transparent,
+                    labelColor: colorScheme.primary,
+                    unselectedLabelColor: colorScheme.onSurfaceVariant,
+                    tabs: [
+                      Consumer<MessageProvider>(
+                        builder: (_, mp, _) => Tab(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Inbox'),
+                              if (mp.unreadCount > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.error,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text('${mp.unreadCount}',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Tab(text: 'Sent'),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _MessageList(inbox: true),
+                    _MessageList(inbox: false),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _composeMessage(context),
-        child: const Icon(Icons.edit_outlined),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _MessageList(inbox: true),
-          _MessageList(inbox: false),
-        ],
       ),
     );
   }
@@ -122,9 +178,11 @@ class _MessageList extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.email_outlined, size: 64, color: colorScheme.onSurfaceVariant),
+                  Icon(Icons.email_outlined,
+                      size: 64, color: colorScheme.onSurfaceVariant),
                   const SizedBox(height: 16),
-                  Text(inbox ? 'No messages' : 'No sent messages', style: theme.textTheme.bodyLarge),
+                  Text(inbox ? 'No messages' : 'No sent messages',
+                      style: theme.textTheme.bodyLarge),
                 ],
               ),
             ),
@@ -143,7 +201,7 @@ class _MessageList extends StatelessWidget {
             }
           },
           child: ListView.builder(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             itemCount: messages.length + (inbox && hasMore ? 1 : 0),
             itemBuilder: (context, index) {
               if (inbox && hasMore && index == messages.length) {
@@ -166,11 +224,10 @@ class _MessageList extends StatelessWidget {
               }
               final m = messages[index];
               final df = DateFormat('MMM dd');
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: AuroraCard(
+                  padding: const EdgeInsets.all(14),
                   onTap: () {
                     if (inbox && !m.isRead) {
                       mp.markRead(m.id);
@@ -180,58 +237,67 @@ class _MessageList extends StatelessWidget {
                       builder: (_) => _MessageDetailDialog(message: m),
                     );
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40, height: 40,
-                          decoration: BoxDecoration(
-                            color: inbox
-                                ? (m.isRead ? colorScheme.surfaceContainerHighest : colorScheme.primaryContainer)
-                                : colorScheme.secondaryContainer,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              (inbox ? m.senderName : m.recipientName)[0].toUpperCase(),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: inbox
-                                    ? (m.isRead ? colorScheme.onSurfaceVariant : colorScheme.onPrimaryContainer)
-                                    : colorScheme.onSecondaryContainer,
-                              ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: inbox
+                              ? (m.isRead
+                                  ? colorScheme.surfaceContainerHighest
+                                  : colorScheme.primary.withValues(alpha: 0.15))
+                              : colorScheme.secondaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            (inbox ? m.senderName : m.recipientName)[0]
+                                .toUpperCase(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: inbox
+                                  ? (m.isRead
+                                      ? colorScheme.onSurfaceVariant
+                                      : colorScheme.primary)
+                                  : colorScheme.onSecondaryContainer,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                inbox ? m.senderName : m.recipientName,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: m.isRead ? FontWeight.normal : FontWeight.bold,
-                                ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              inbox ? m.senderName : m.recipientName,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: m.isRead
+                                    ? FontWeight.normal
+                                    : FontWeight.bold,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                m.subject,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontWeight: m.isRead ? FontWeight.normal : FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              m.subject,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: m.isRead
+                                    ? FontWeight.normal
+                                    : FontWeight.w600,
                               ),
-                            ],
-                          ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(df.format(m.createdAt), style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(df.format(m.createdAt),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant)),
+                    ],
                   ),
                 ),
               );
@@ -250,11 +316,12 @@ class _MessageDetailDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final df = DateFormat('MMM dd, yyyy HH:mm');
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
+      backgroundColor: Colors.transparent,
+      child: AuroraCard(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -263,7 +330,9 @@ class _MessageDetailDialog extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(message.subject, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  child: Text(message.subject,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -272,11 +341,15 @@ class _MessageDetailDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text('From: ${message.senderName}', style: theme.textTheme.bodySmall),
-            Text('To: ${message.recipientName}', style: theme.textTheme.bodySmall),
-            Text(df.format(message.createdAt), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            Text('From: ${message.senderName}',
+                style: theme.textTheme.bodySmall),
+            Text('To: ${message.recipientName}',
+                style: theme.textTheme.bodySmall),
+            Text(df.format(message.createdAt),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant)),
             const SizedBox(height: 16),
-            const Divider(),
+            Container(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
             const SizedBox(height: 8),
             Text(message.body, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 16),
@@ -335,66 +408,74 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('New Message', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Text('New Message',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Recipient',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                prefixIcon: const Icon(Icons.person_outline),
               ),
-              items: _teachers.map((t) => DropdownMenuItem(
-                value: t['id'] as String,
-                child: Text(t['name'] as String? ?? ''),
-              )).toList(),
+              items: _teachers
+                  .map((t) => DropdownMenuItem(
+                        value: t['id'] as String,
+                        child: Text(t['name'] as String? ?? ''),
+                      ))
+                  .toList(),
               onChanged: (v) => _selectedRecipientId = v,
               validator: (v) => v == null ? 'Select a recipient' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _subjectCtrl,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Subject',
-                border: OutlineInputBorder(),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter subject' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter subject' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _bodyCtrl,
               maxLines: 4,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Message',
-                border: OutlineInputBorder(),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 alignLabelWithHint: true,
               ),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter message' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter message' : null,
             ),
             const SizedBox(height: 16),
             Consumer<MessageProvider>(
               builder: (context, mp, _) {
-                return SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: FilledButton(
-                    onPressed: mp.sending ? null : () async {
-                      if (!_formKey.currentState!.validate()) return;
-                      final auth = context.read<AuthProvider>();
-                      if (auth.user == null || _selectedRecipientId == null) return;
-                      final ok = await mp.sendMessage(
-                        auth.user!.id,
-                        _selectedRecipientId!,
-                        _subjectCtrl.text.trim(),
-                        _bodyCtrl.text.trim(),
-                      );
-                      if (ok && context.mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                    child: mp.sending
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Send'),
-                  ),
+                return AuroraButton(
+                  label: mp.sending ? 'Sending...' : 'Send',
+                  loading: mp.sending,
+                  onPressed: mp.sending
+                      ? null
+                      : () async {
+                          if (!_formKey.currentState!.validate()) return;
+                          final auth = context.read<AuthProvider>();
+                          if (auth.user == null ||
+                              _selectedRecipientId == null) { return; }
+                          final ok = await mp.sendMessage(
+                            auth.user!.id,
+                            _selectedRecipientId!,
+                            _subjectCtrl.text.trim(),
+                            _bodyCtrl.text.trim(),
+                          );
+                          if (ok && context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
                 );
               },
             ),

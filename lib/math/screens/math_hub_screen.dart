@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/student.dart';
+import '../../theme/aurora_background.dart';
 import '../models/math_question.dart';
 import '../models/math_progress.dart';
 import '../providers/math_provider.dart';
+import '../../widgets/responsive_content.dart';
 import 'speed_challenge_screen.dart';
 
 class MathHubScreen extends StatefulWidget {
@@ -59,7 +61,9 @@ class _MathHubScreenState extends State<MathHubScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
+      body: AuroraBackground(
+        child: ResponsiveContent(
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,8 +79,10 @@ class _MathHubScreenState extends State<MathHubScreen> {
             if (progress != null) _buildProgressOverview(theme, colorScheme, mp, progress),
           ],
         ),
+        ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildHeader(ThemeData theme, StudentMathProgress? progress) {

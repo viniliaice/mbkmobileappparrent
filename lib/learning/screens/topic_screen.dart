@@ -5,6 +5,7 @@ import '../../models/student.dart';
 import '../models/topic.dart';
 import '../data/content.dart';
 import '../provider.dart';
+import '../../widgets/responsive_content.dart';
 import 'lesson_screen.dart';
 
 class TopicListScreen extends StatefulWidget {
@@ -45,7 +46,8 @@ class _TopicListScreenState extends State<TopicListScreen> {
           if (!lp.loaded) {
             return const Center(child: CircularProgressIndicator());
           }
-          return ListView.builder(
+          return ResponsiveContent(
+            child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: subjects.length,
             itemBuilder: (context, index) {
@@ -62,6 +64,7 @@ class _TopicListScreenState extends State<TopicListScreen> {
                 curve: Curves.easeOut,
               );
             },
+            ),
           );
         },
       ),

@@ -46,6 +46,7 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
   late AnimationController _confettiController;
   late AnimationController _entryController;
   MathQuestion? _currentQuestion;
+  List<String> _currentOptions = [];
   ConfettiController? _centerConfetti;
   ConfettiController? _leftConfetti;
   ConfettiController? _rightConfetti;
@@ -105,10 +106,6 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
 
   void _startGame() {
     _questions = QuestionGenerator.generateSpeedChallenge(widget.grade, 50);
-    debugPrint('SPEED: generated ${_questions.length} questions for grade ${widget.grade}');
-    for (final q in _questions.take(3)) {
-      debugPrint('SPEED:   question="${q.question}" answer="${q.correctAnswer}" options=${q.options}');
-    }
     _questions.shuffle(math.Random(DateTime.now().millisecondsSinceEpoch));
     _questionIndex = 0;
     _correctCount = 0;
@@ -121,6 +118,9 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
     _isFinished = false;
     _showFeedback = false;
     _currentQuestion = _questions.isNotEmpty ? _questions[0] : null;
+    _currentOptions = _currentQuestion != null
+        ? _pickThreeOptions(_currentQuestion!.options, _currentQuestion!.correctAnswer)
+        : [];
     _timer = Timer.periodic(const Duration(seconds: 1), _onTick);
   }
 
@@ -167,11 +167,9 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
 
   void _answer(String selected) {
     if (!_isRunning || _showFeedback || _currentQuestion == null) return;
-    debugPrint('ANSWER: selected="$selected" correct="${_currentQuestion!.correctAnswer}"');
 
     final correct = selected == _currentQuestion!.correctAnswer;
 
-    // Haptic feedback
     if (correct) {
       HapticFeedback.lightImpact();
       _combo++;
@@ -207,8 +205,29 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
           _questionIndex = 0;
         }
         _currentQuestion = _questions[_questionIndex];
+        _currentOptions = _pickThreeOptions(
+          _currentQuestion!.options,
+          _currentQuestion!.correctAnswer,
+        );
       });
     });
+  }
+
+  List<String> _pickThreeOptions(List<String> allOptions, String correct) {
+    final seed = correct.hashCode ^ allOptions.length ^ _questionIndex;
+    final rng = math.Random(seed);
+
+    final picked = <String>{correct};
+    final others = allOptions.where((o) => o != correct).toList()..shuffle(rng);
+    for (final o in others) {
+      if (picked.length >= 3) break;
+      picked.add(o);
+    }
+    while (picked.length < 3) {
+      final fallback = (int.tryParse(correct) ?? 0) + picked.length;
+      picked.add('$fallback');
+    }
+    return picked.toList()..shuffle(math.Random(seed + 1));
   }
 
   String _gradeRating() {
@@ -225,46 +244,52 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
   String _ratingLabel(String rating) {
     switch (rating) {
       case 'A+': return 'Superstar!';
-      case 'A': return 'Excellent!';
-      case 'B': return 'Great Job!';
-      case 'C': return 'Good Try!';
-      case 'D': return 'Keep Practicing!';
-      default: return 'Don\'t Give Up!';
+      case 'A':  return 'Excellent!';
+      case 'B':  return 'Great Job!';
+      case 'C':  return 'Good Try!';
+      case 'D':  return 'Keep Practicing!';
+      default:   return 'Don\'t Give Up!';
     }
   }
 
   Color _ratingColor(String rating) {
     switch (rating) {
-      case 'A+': case 'A': return Colors.green;
-      case 'B': return Colors.blue;
-      case 'C': return Colors.orange;
-      case 'D': return Colors.deepOrange;
-      default: return Colors.red;
+      case 'A+':
+      case 'A':  return Colors.green;
+      case 'B':  return Colors.blue;
+      case 'C':  return Colors.orange;
+      case 'D':  return Colors.deepOrange;
+      default:   return Colors.red;
     }
   }
 
+  bool get isDark => Theme.of(context).brightness == Brightness.dark;
+
   @override
   Widget build(BuildContext context) {
-    debugPrint('BUILD: qIndex=$_questionIndex qCount=${_questions.length} currentQ=${_currentQuestion?.question} pulseValue=${_pulseController.value}');
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final dark = isDark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F23) : const Color(0xFFF8FAFF),
+      backgroundColor: dark ? const Color(0xFF0F0F23) : const Color(0xFFF8FAFF),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('Grade ${widget.grade} Speed Challenge',
-            style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          'Grade ${widget.grade} Speed Challenge',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
       ),
       body: Stack(
         children: [
-          _buildBackground(isDark, colorScheme),
-          if (_isFinished) _buildResults(theme, colorScheme, isDark)
-          else _buildGame(theme, colorScheme, isDark),
+          _buildBackground(dark, colorScheme),
+          if (_isFinished)
+            _buildResults(theme, colorScheme, dark)
+          else
+            _buildGame(theme, colorScheme, dark),
           // Confetti overlays
           Align(
             alignment: Alignment.topCenter,
@@ -296,7 +321,12 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
               particleDrag: 0.05,
               emissionFrequency: 0.05,
               numberOfParticles: 20,
-              colors: const [Colors.amber, Colors.pink, Colors.cyan, Colors.green],
+              colors: const [
+                Colors.amber,
+                Colors.pink,
+                Colors.cyan,
+                Colors.green,
+              ],
             ),
           ),
           Align(
@@ -308,7 +338,12 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
               particleDrag: 0.05,
               emissionFrequency: 0.05,
               numberOfParticles: 20,
-              colors: const [Colors.amber, Colors.pink, Colors.cyan, Colors.green],
+              colors: const [
+                Colors.amber,
+                Colors.pink,
+                Colors.cyan,
+                Colors.green,
+              ],
             ),
           ),
         ],
@@ -316,30 +351,32 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
     );
   }
 
-  Widget _buildBackground(bool isDark, ColorScheme colorScheme) {
+  // ── Background ───────────────────────────────────────────────────
+  Widget _buildBackground(bool dark, ColorScheme colorScheme) {
     return AnimatedContainer(
       duration: const Duration(seconds: 2),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: isDark
+          colors: dark
               ? [
-                  const Color(0xFF0F0F23),
-                  const Color(0xFF1A1A3E),
-                  const Color(0xFF0D0D1A),
-                ]
+            const Color(0xFF0F0F23),
+            const Color(0xFF1A1A3E),
+            const Color(0xFF0D0D1A),
+          ]
               : [
-                  const Color(0xFFF8FAFF),
-                  const Color(0xFFE8F0FF),
-                  const Color(0xFFF0F4FF),
-                ],
+            const Color(0xFFF8FAFF),
+            const Color(0xFFE8F0FF),
+            const Color(0xFFF0F4FF),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildGame(ThemeData theme, ColorScheme colorScheme, bool isDark) {
+  // ── Game Screen ──────────────────────────────────────────────────
+  Widget _buildGame(ThemeData theme, ColorScheme colorScheme, bool dark) {
     final total = _correctCount + _incorrectCount;
     final accuracy = total > 0 ? (_correctCount / total * 100).toInt() : 0;
 
@@ -358,7 +395,7 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
                 Expanded(
                   child: _currentQuestion == null
                       ? _buildLoading()
-                      : _buildQuestionArea(theme, colorScheme),
+                      : _buildQuestionArea(theme, colorScheme, dark),
                 ),
                 if (_showFeedback) _buildFeedbackStrip(theme, colorScheme),
                 if (!_showFeedback && _currentQuestion != null)
@@ -377,11 +414,13 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
     );
   }
 
+  // ── Top Bar ──────────────────────────────────────────────────────
   Widget _buildTopBar(ThemeData theme, ColorScheme colorScheme, int accuracy) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
+          // Correct count
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
@@ -394,16 +433,19 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
               children: [
                 Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
                 const SizedBox(width: 4),
-                Text('$_correctCount',
-                    style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    )),
+                Text(
+                  '$_correctCount',
+                  style: TextStyle(
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 8),
+          // Incorrect count
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
@@ -416,21 +458,27 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
               children: [
                 Icon(Icons.cancel, size: 16, color: Colors.red.shade700),
                 const SizedBox(width: 4),
-                Text('$_incorrectCount',
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    )),
+                Text(
+                  '$_incorrectCount',
+                  style: TextStyle(
+                    color: Colors.red.shade700,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ),
           const Spacer(),
+          // Score
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.7)],
+                colors: [
+                  colorScheme.primary,
+                  colorScheme.primary.withValues(alpha: 0.7),
+                ],
               ),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
@@ -446,16 +494,19 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
               children: [
                 const Icon(Icons.star, size: 16, color: Colors.white),
                 const SizedBox(width: 4),
-                Text('$_score',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    )),
+                Text(
+                  '$_score',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 8),
+          // Combo badge
           if (_combo > 1)
             AnimatedScale(
               scale: _combo > 5 ? 1.1 : 1.0,
@@ -463,7 +514,7 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [Colors.amber, Colors.orange],
                   ),
                   borderRadius: BorderRadius.circular(14),
@@ -471,14 +522,17 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.local_fire_department, size: 16, color: Colors.white),
+                    const Icon(Icons.local_fire_department,
+                        size: 16, color: Colors.white),
                     const SizedBox(width: 4),
-                    Text('x$_combo',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        )),
+                    Text(
+                      'x$_combo',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -488,14 +542,15 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
     );
   }
 
+  // ── Timer Bar ────────────────────────────────────────────────────
   Widget _buildTimerBar(ThemeData theme, ColorScheme colorScheme) {
     final fraction = _timeLeft / 60.0;
     final isCritical = _timeLeft <= 10;
     final timerColor = fraction > 0.5
         ? Colors.green
         : fraction > 0.25
-            ? Colors.orange
-            : Colors.red;
+        ? Colors.orange
+        : Colors.red;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -507,7 +562,9 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
                 animation: _timerPulseController,
                 builder: (context, child) {
                   return Transform.scale(
-                    scale: isCritical ? (0.9 + _timerPulseController.value * 0.2) : 1.0,
+                    scale: isCritical
+                        ? (0.9 + _timerPulseController.value * 0.2)
+                        : 1.0,
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -533,11 +590,13 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
                 ),
               ),
               const SizedBox(width: 8),
-              Text('sec',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              )),
+              Text(
+                'sec',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -550,7 +609,7 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
             child: Stack(
               children: [
                 FractionallySizedBox(
-                  widthFactor: fraction,
+                  widthFactor: fraction.clamp(0.0, 1.0),
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(5),
@@ -571,20 +630,35 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
     );
   }
 
+  // ── Stats Row ────────────────────────────────────────────────────
   Widget _buildStatsRow(ThemeData theme, ColorScheme colorScheme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          Expanded(child: _statChip(Icons.check_circle, Colors.green, '$_correctCount', 'Correct')),
+          Expanded(
+            child: _statChip(
+              Icons.check_circle,
+              Colors.green,
+              '$_correctCount',
+              'Correct',
+            ),
+          ),
           const SizedBox(width: 8),
-          Expanded(child: _statChip(Icons.cancel, Colors.red, '$_incorrectCount', 'Wrong')),
+          Expanded(
+            child: _statChip(
+              Icons.cancel,
+              Colors.red,
+              '$_incorrectCount',
+              'Wrong',
+            ),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: _statChip(
               Icons.speed,
               colorScheme.primary,
-              '$_correctCount + $_incorrectCount',
+              '${_correctCount + _incorrectCount}',
               'Total',
             ),
           ),
@@ -605,25 +679,29 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
         children: [
           Icon(icon, size: 20, color: color),
           const SizedBox(height: 2),
-          Text(value,
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                color: color,
-                fontSize: 16,
-              )),
-          Text(label,
-              style: TextStyle(
-                fontSize: 10,
-                color: color.withValues(alpha: 0.8),
-              )),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: color,
+              fontSize: 16,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color.withValues(alpha: 0.8),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildQuestionArea(ThemeData theme, ColorScheme colorScheme) {
+  // ── Question Area ────────────────────────────────────────────────
+  Widget _buildQuestionArea(ThemeData theme, ColorScheme colorScheme, bool dark) {
     final q = _currentQuestion!;
-    debugPrint('QUESTION_AREA: text="${q.question}" answer="${q.correctAnswer}" pulseValue=${_pulseController.value}');
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       switchInCurve: Curves.easeOutCubic,
@@ -633,31 +711,37 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
           position: Tween<Offset>(
             begin: const Offset(0, 0.15),
             end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+          ).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          ),
           child: FadeTransition(opacity: animation, child: child),
         );
       },
       child: Padding(
-        key: ValueKey('${q.id}_$_correctCount'),
+        key: ValueKey('${q.id}_$_questionIndex'),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Center(
           child: ScaleTransition(
-            scale: _pulseController.drive(CurveTween(curve: Curves.elasticOut)),
+            scale: _pulseController.drive(
+              CurveTween(curve: Curves.elasticOut),
+            ),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E3F) : Colors.white,
+                color: dark ? const Color(0xFF1E1E3F) : Colors.white,
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: isDark ? 0.15 : 0.08),
+                    color: colorScheme.primary
+                        .withValues(alpha: dark ? 0.15 : 0.08),
                     blurRadius: 30,
                     offset: const Offset(0, 12),
                     spreadRadius: -4,
                   ),
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+                    color:
+                    Colors.black.withValues(alpha: dark ? 0.3 : 0.04),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -673,28 +757,33 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text('Question ${_questionIndex + 1}',
-                            style: TextStyle(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            )),
+                        child: Text(
+                          'Question ${_questionIndex + 1}',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text(q.question,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    height: 1.3,
-                    letterSpacing: -0.3,
-                  )),
+                  Text(
+                    q.question,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      height: 1.3,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -704,110 +793,117 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
     );
   }
 
-  bool get isDark => Theme.of(context).brightness == Brightness.dark;
-
+  // ── Answer Options ───────────────────────────────────────────────
   Widget _buildAnswerOptions(ThemeData theme, ColorScheme colorScheme) {
-    final q = _currentQuestion!;
-    // Options are pre-shuffled at generation time — never re-shuffle on display
-    final options = q.options.length >= 3 ? q.options.sublist(0, 3) : q.options;
+    if (_currentQuestion == null || _currentOptions.isEmpty) {
+      return const SizedBox();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
-        children: [
-          ...List.generate(3, (i) {
-            if (i >= options.length) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _answerButton(options[i], theme, colorScheme, i),
-            );
-          }),
-        ],
+        children: List.generate(_currentOptions.length, (i) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _answerButton(_currentOptions[i], theme, colorScheme),
+          );
+        }),
       ),
     );
   }
 
-  Widget _answerButton(String text, ThemeData theme, ColorScheme colorScheme, int index) {
+  Widget _answerButton(String text, ThemeData theme, ColorScheme colorScheme) {
+    final isCorrect = text == _currentQuestion?.correctAnswer;
+
+    final Color borderColor;
+    final Color bgColor;
+    final Color textColor;
+
+    if (_showFeedback) {
+      if (isCorrect) {
+        borderColor = Colors.green;
+        bgColor = Colors.green.withValues(alpha: 0.15);
+        textColor = Colors.green.shade800;
+      } else {
+        borderColor = Colors.red;
+        bgColor = Colors.red.withValues(alpha: 0.1);
+        textColor = Colors.red.shade800;
+      }
+    } else {
+      borderColor = colorScheme.outlineVariant.withValues(alpha: 0.3);
+      bgColor = isDark ? const Color(0xFF1E1E3F) : Colors.white;
+      textColor = colorScheme.primary;
+    }
+
     return AnimatedBuilder(
       animation: _shakeController,
       builder: (context, child) {
-        final isShaking = _shakeController.isAnimating && _lastCorrect == false;
-        final offset = isShaking
+        // Only shake the wrong buttons when an incorrect answer is given
+        final shouldShake = _showFeedback &&
+            !_lastCorrect &&
+            !isCorrect &&
+            _shakeController.isAnimating;
+
+        final offset = shouldShake
             ? math.sin(_shakeController.value * 6 * math.pi) * 8
             : 0.0;
+
         return Transform.translate(
           offset: Offset(offset, 0),
-          child: AnimatedScale(
-            scale: _showFeedback && _lastCorrect && text == _currentQuestion?.correctAnswer
-                ? 1.02
-                : 1.0,
-            duration: const Duration(milliseconds: 200),
-            child: Material(
-              color: _showFeedback
-                  ? (text == _currentQuestion?.correctAnswer
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : text == _currentQuestion?.correctAnswer
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : Colors.red.withValues(alpha: 0.1))
-                  : Colors.white,
+          child: child,
+        );
+      },
+      child: Material(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        elevation: _showFeedback ? 0 : 4,
+        shadowColor: colorScheme.primary.withValues(alpha: 0.15),
+        child: InkWell(
+          onTap: _showFeedback ? null : () => _answer(text),
+          borderRadius: BorderRadius.circular(20),
+          splashColor: colorScheme.primary.withValues(alpha: 0.1),
+          highlightColor: colorScheme.primary.withValues(alpha: 0.05),
+          child: Container(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              elevation: _showFeedback ? 0 : 4,
-              shadowColor: colorScheme.primary.withValues(alpha: 0.15),
-              child: InkWell(
-                onTap: _showFeedback ? null : () => _answer(text),
-                borderRadius: BorderRadius.circular(20),
-                splashColor: colorScheme.primary.withValues(alpha: 0.1),
-                highlightColor: colorScheme.primary.withValues(alpha: 0.05),
-                child: Container(
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _showFeedback
-                          ? (text == _currentQuestion?.correctAnswer
-                              ? Colors.green
-                              : Colors.red)
-                          : colorScheme.outlineVariant.withValues(alpha: 0.3),
-                      width: _showFeedback ? 3 : 1.5,
+              border: Border.all(
+                color: borderColor,
+                width: _showFeedback ? 3 : 1.5,
+              ),
+            ),
+            child: Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_showFeedback)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Icon(
+                        isCorrect ? Icons.check_circle : Icons.cancel,
+                        color: isCorrect ? Colors.green : Colors.red,
+                        size: 26,
+                      ),
+                    ),
+                  Text(
+                    text,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                      fontSize: 28,
                     ),
                   ),
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (_showFeedback && text == _currentQuestion?.correctAnswer)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Icon(Icons.check_circle, color: Colors.green, size: 26),
-                          )
-                        else if (_showFeedback && text != _currentQuestion?.correctAnswer)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Icon(Icons.cancel, color: Colors.red, size: 26),
-                          ),
-                        Text(text,
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: _showFeedback
-                              ? (text == _currentQuestion?.correctAnswer
-                                  ? Colors.green.shade800
-                                  : Colors.red.shade800)
-                              : colorScheme.primary,
-                          fontSize: 28,
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
+  // ── Feedback Strip ───────────────────────────────────────────────
   Widget _buildFeedbackStrip(ThemeData theme, ColorScheme colorScheme) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -817,8 +913,14 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: _lastCorrect
-              ? [Colors.green.withValues(alpha: 0.2), Colors.green.withValues(alpha: 0.1)]
-              : [Colors.red.withValues(alpha: 0.2), Colors.red.withValues(alpha: 0.1)],
+              ? [
+            Colors.green.withValues(alpha: 0.2),
+            Colors.green.withValues(alpha: 0.1),
+          ]
+              : [
+            Colors.red.withValues(alpha: 0.2),
+            Colors.red.withValues(alpha: 0.1),
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
@@ -827,7 +929,8 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: (_lastCorrect ? Colors.green : Colors.red).withValues(alpha: 0.2),
+            color: (_lastCorrect ? Colors.green : Colors.red)
+                .withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -836,24 +939,23 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AnimatedScale(
-            scale: _pulseController.value > 0 ? 1.2 : 1.0,
-            duration: const Duration(milliseconds: 200),
-            child: Icon(
-              _lastCorrect ? Icons.celebration : Icons.sentiment_dissatisfied,
-              color: _lastCorrect ? Colors.green : Colors.red,
-              size: 28,
-            ),
+          Icon(
+            _lastCorrect ? Icons.celebration : Icons.sentiment_dissatisfied,
+            color: _lastCorrect ? Colors.green : Colors.red,
+            size: 28,
           ),
           const SizedBox(width: 10),
           Flexible(
             child: Text(
               _lastCorrect
-                  ? '+${10 + (_timeLeft ~/ 5) + (_combo ~/ 3) * 5} pts! ${_combo > 2 ? "x$_combo Combo!" : ""}'
+                  ? '+${10 + (_timeLeft ~/ 5) + (_combo ~/ 3) * 5} pts!'
+                  '${_combo > 2 ? "  x$_combo Combo!" : ""}'
                   : 'Answer: ${_currentQuestion?.correctAnswer}',
               style: theme.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: _lastCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                color: _lastCorrect
+                    ? Colors.green.shade800
+                    : Colors.red.shade800,
               ),
               textAlign: TextAlign.center,
             ),
@@ -864,7 +966,7 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
   }
 
   // ── Results Screen ───────────────────────────────────────────────
-  Widget _buildResults(ThemeData theme, ColorScheme colorScheme, bool isDark) {
+  Widget _buildResults(ThemeData theme, ColorScheme colorScheme, bool dark) {
     final total = _correctCount + _incorrectCount;
     final acc = total > 0 ? (_correctCount / total * 100).toInt() : 0;
     final rating = _gradeRating();
@@ -874,7 +976,6 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
       padding: const EdgeInsets.fromLTRB(24, 100, 24, 40),
       child: Column(
         children: [
-          // Confetti celebration
           if (acc >= 80)
             Padding(
               padding: const EdgeInsets.only(bottom: 20),
@@ -891,19 +992,24 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
             ),
           _buildScoreCircle(acc, ratingColor, theme, colorScheme),
           const SizedBox(height: 20),
-          Text('Time\'s Up!',
-              style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          )),
+          Text(
+            'Time\'s Up!',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('Grade ${widget.grade} Speed Challenge',
-              style: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          )),
+          Text(
+            'Grade ${widget.grade} Speed Challenge',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [ratingColor, ratingColor.withValues(alpha: 0.7)],
@@ -919,30 +1025,44 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
             ),
             child: Column(
               children: [
-                Text(rating,
-                    style: theme.textTheme.displaySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 36,
-                )),
-                Text(_ratingLabel(rating),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    )),
+                Text(
+                  rating,
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 36,
+                  ),
+                ),
+                Text(
+                  _ratingLabel(rating),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 28),
-          _buildResultCard('Questions Answered', '$total', Icons.help_outline, colorScheme.primary),
-          _buildResultCard('Correct Answers', '$_correctCount', Icons.check_circle, Colors.green),
-          _buildResultCard('Incorrect Answers', '$_incorrectCount', Icons.cancel, Colors.red),
-          _buildResultCard('Accuracy', '$acc%', Icons.analytics_outlined,
-              acc >= 70 ? Colors.green : Colors.orange),
-          _buildResultCard('Best Combo', 'x$_bestCombo', Icons.local_fire_department, Colors.amber),
-          _buildResultCard('Final Score', '$_score', Icons.star, Colors.amber),
-          _buildResultCard('Personal Best', '$_personalBest', Icons.emoji_events, Colors.amber.shade700),
+          _buildResultCard('Questions Answered', '$total',
+              Icons.help_outline, colorScheme.primary),
+          _buildResultCard('Correct Answers', '$_correctCount',
+              Icons.check_circle, Colors.green),
+          _buildResultCard('Incorrect Answers', '$_incorrectCount',
+              Icons.cancel, Colors.red),
+          _buildResultCard(
+            'Accuracy',
+            '$acc%',
+            Icons.analytics_outlined,
+            acc >= 70 ? Colors.green : Colors.orange,
+          ),
+          _buildResultCard('Best Combo', 'x$_bestCombo',
+              Icons.local_fire_department, Colors.amber),
+          _buildResultCard(
+              'Final Score', '$_score', Icons.star, Colors.amber),
+          _buildResultCard('Personal Best', '$_personalBest',
+              Icons.emoji_events, Colors.amber.shade700),
           const SizedBox(height: 28),
           Row(
             children: [
@@ -956,7 +1076,8 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    side: BorderSide(color: colorScheme.outlineVariant, width: 1.5),
+                    side: BorderSide(
+                        color: colorScheme.outlineVariant, width: 1.5),
                     foregroundColor: colorScheme.onSurface,
                   ),
                 ),
@@ -1003,7 +1124,8 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
     );
   }
 
-  Widget _buildScoreCircle(int acc, Color color, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildScoreCircle(
+      int acc, Color color, ThemeData theme, ColorScheme colorScheme) {
     return Container(
       width: 140,
       height: 140,
@@ -1023,23 +1145,28 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('$acc%',
-                style: theme.textTheme.displayMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: color,
-              fontSize: 48,
-            )),
-            Text('Accuracy',
-                style: theme.textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            )),
+            Text(
+              '$acc%',
+              style: theme.textTheme.displayMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: color,
+                fontSize: 48,
+              ),
+            ),
+            Text(
+              'Accuracy',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildResultCard(String label, String value, IconData icon, Color color) {
+  Widget _buildResultCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
@@ -1060,19 +1187,23 @@ class _SpeedChallengeScreenState extends State<SpeedChallengeScreen>
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 14),
-          Text(label,
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontWeight: FontWeight.w500,
-                fontSize: 15,
-              )),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+            ),
+          ),
           const Spacer(),
-          Text(value,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
-              )),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+            ),
+          ),
         ],
       ),
     );

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/student.dart';
+import '../../theme/aurora_background.dart';
+import '../../widgets/responsive_content.dart';
 import '../models/topic.dart';
 import '../provider.dart';
 import '../widgets/activity_renderer.dart';
 import '../widgets/celebration.dart';
+import '../widgets/pronounce_button.dart';
+import '../widgets/geo_shapes.dart';
+
 
 class LessonScreen extends StatefulWidget {
   final Student student;
@@ -23,11 +28,18 @@ class LessonScreen extends StatefulWidget {
 }
 
 class _LessonScreenState extends State<LessonScreen> {
+  final Stopwatch _timer = Stopwatch();
   int _currentStep = 0;
   int _correctCount = 0;
   bool _showCelebration = false;
   bool _lessonComplete = false;
   bool _needsContinue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer.start();
+  }
 
   bool get _isIntroStep => _currentStep == 0;
   bool get _isFinalStep => _currentStep == widget.lesson.activities.length + 1;
@@ -48,11 +60,17 @@ class _LessonScreenState extends State<LessonScreen> {
       ),
       body: Stack(
         children: [
+          Positioned.fill(
+            child: AuroraBackground(
+              child: const SizedBox.shrink(),
+            ),
+          ),
           Column(
             children: [
               _buildProgressBar(theme, colorScheme),
               Expanded(
-                child: SingleChildScrollView(
+                child: ResponsiveContent(
+                  child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),
@@ -72,10 +90,11 @@ class _LessonScreenState extends State<LessonScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
-          if (_showCelebration)
-            CelebrationOverlay(
+            ),
+          ],
+        ),
+        if (_showCelebration)
+          CelebrationOverlay(
               title: 'Lesson Complete!',
               subtitle: widget.lesson.objective,
               xpGained: widget.lesson.xpReward,
@@ -187,12 +206,22 @@ class _LessonScreenState extends State<LessonScreen> {
                   style: theme.textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               )),
-              const SizedBox(height: 8),
-              Text(widget.lesson.explanation,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              )),
+              const SizedBox(height: 12),
+              if (widget.lesson.vocabWords != null && widget.lesson.vocabWords!.isNotEmpty) ...[
+                ..._buildVocabCards(theme, colorScheme),
+              ],
+              if (widget.lesson.shapeIntros != null && widget.lesson.shapeIntros!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ..._buildShapeCards(theme, colorScheme),
+              ],
+              if ((widget.lesson.vocabWords == null || widget.lesson.vocabWords!.isEmpty) &&
+                  (widget.lesson.shapeIntros == null || widget.lesson.shapeIntros!.isEmpty)) ...[
+                Text(widget.lesson.explanation,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.5,
+                )),
+              ],
             ],
           ),
         ),
@@ -238,6 +267,8 @@ class _LessonScreenState extends State<LessonScreen> {
         ActivityRenderer(
           key: ValueKey(activity.id),
           activity: activity,
+          showTts: _isEnglish,
+          vocabWords: widget.lesson.vocabWords,
           onCorrect: () {
             setState(() {
               _correctCount++;
@@ -252,9 +283,7 @@ class _LessonScreenState extends State<LessonScreen> {
         ),
         if (_needsContinue) ...[
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
+          FilledButton.icon(
               onPressed: () {
                 setState(() {
                   _needsContinue = false;
@@ -271,8 +300,7 @@ class _LessonScreenState extends State<LessonScreen> {
               icon: const Icon(Icons.arrow_forward),
               label: const Text('Continue'),
             ),
-          ),
-        ],
+          ],
       ],
     );
   }
@@ -331,12 +359,14 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   Future<void> _finishLesson() async {
+    _timer.stop();
     final lp = context.read<LearningProvider>();
     await lp.completeLesson(
       widget.student.id,
       widget.lesson.id,
       _correctCount,
       widget.lesson.activities.length,
+      timeSpentInSeconds: _timer.elapsed.inSeconds,
     );
     if (!mounted) return;
     setState(() => _lessonComplete = true);
@@ -372,6 +402,156 @@ class _LessonScreenState extends State<LessonScreen> {
         ],
       ),
     ).then((v) => v ?? false);
+  }
+
+  bool get _isEnglish => 
+    widget.lesson.id.startsWith('abc_') ||
+    widget.lesson.id.startsWith('ph_') ||
+    widget.lesson.id.startsWith('voc_') ||
+    widget.lesson.id.startsWith('read_') ||
+    widget.lesson.id.startsWith('gr_') ||
+    widget.lesson.id.startsWith('sp_') ||
+    widget.lesson.id.startsWith('sb_') ||
+    widget.lesson.id.startsWith('spk_') ||
+    widget.lesson.id.startsWith('lis_') ||
+    widget.lesson.id.startsWith('rc_') ||
+    widget.lesson.id.startsWith('st_') ||
+    widget.lesson.id.startsWith('cw_') ||
+    widget.lesson.id.startsWith('punc_');
+
+  List<Widget> _buildVocabCards(ThemeData theme, ColorScheme colorScheme) {
+    final items = widget.lesson.vocabWords ?? [];
+    return items.map((item) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                item.emoji,
+                style: const TextStyle(fontSize: 32),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.word,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      PronounceButton(word: item.word),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.definition,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    item.example,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  List<Widget> _buildShapeCards(ThemeData theme, ColorScheme colorScheme) {
+    final items = widget.lesson.shapeIntros ?? [];
+    return items.map((item) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 56,
+              height: 56,
+              child: CustomPaint(
+                painter: ShapePainter(shape: item.shape, color: item.color),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.funFact,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
   }
 
   Color _scoreColor(double percent) {

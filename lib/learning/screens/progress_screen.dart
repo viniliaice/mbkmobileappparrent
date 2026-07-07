@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/student_provider.dart';
+import '../../theme/aurora_background.dart';
 import '../provider.dart';
+import '../../widgets/responsive_content.dart';
 import '../data/content.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -21,7 +23,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Learning Progress')),
-      body: Consumer2<StudentProvider, LearningProvider>(
+      body: AuroraBackground(
+        child: ResponsiveContent(
+          child: Consumer2<StudentProvider, LearningProvider>(
         builder: (context, sp, lp, _) {
           if (!lp.loaded) {
             return const Center(child: CircularProgressIndicator());
@@ -117,11 +121,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 ),
               ],
             ],
-          );
+            );
         },
+        ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatCard(ThemeData theme, ColorScheme colorScheme,
       String label, String value, IconData icon, Color color) {

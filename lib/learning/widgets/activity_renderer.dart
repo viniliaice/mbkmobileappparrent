@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import '../models/lesson.dart';
 import '../models/activity.dart';
+import '../models/vocab_word.dart';
+import 'pronounce_button.dart';
 
 class ActivityRenderer extends StatefulWidget {
   final LearningActivity activity;
   final VoidCallback onCorrect;
   final VoidCallback onIncorrect;
+  final bool showTts;
+  final List<VocabWord>? vocabWords;
 
   const ActivityRenderer({
     super.key,
     required this.activity,
     required this.onCorrect,
     required this.onIncorrect,
+    this.showTts = false,
+    this.vocabWords,
   });
 
   @override
@@ -71,6 +77,10 @@ class _ActivityRendererState extends State<ActivityRenderer> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildQuestionCard(theme, colorScheme),
+        if (widget.vocabWords != null && widget.vocabWords!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _buildVocabBar(theme, colorScheme),
+        ],
         const SizedBox(height: 16),
         _buildActivityArea(theme, colorScheme),
         const SizedBox(height: 12),
@@ -154,12 +164,75 @@ class _ActivityRendererState extends State<ActivityRenderer> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(widget.activity.question,
-              style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            height: 1.5,
-          )),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(widget.activity.question,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                )),
+              ),
+              if (widget.showTts)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: PronounceButton(word: widget.activity.question),
+                ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVocabBar(ThemeData theme, ColorScheme colorScheme) {
+    final items = widget.vocabWords!;
+    return SizedBox(
+      height: 72,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: theme.brightness == Brightness.dark
+                  ? const Color(0xFF141D3A).withValues(alpha: 0.6)
+                  : Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: colorScheme.primary.withValues(alpha: 0.1),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(item.emoji, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.word,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    )),
+                    Text(item.definition,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    )),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                PronounceButton(word: item.word, iconSize: 18),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

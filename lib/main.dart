@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mbk_parent_portal/services/tts_service.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/student_provider.dart';
@@ -11,11 +12,11 @@ import 'math/providers/math_provider.dart';
 import 'screens/login_screen.dart';
 import 'widgets/app_shell.dart';
 import 'services/supabase_service.dart';
-import 'theme/app_theme.dart';
+import 'theme/aurora_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  TtsService().speak('').catchError((_) {}); // triggers init silently
   await SupabaseService().initialize();
 
   runApp(const MBKParentPortalApp());
@@ -40,8 +41,8 @@ class MBKParentPortalApp extends StatelessWidget {
       child: MaterialApp(
         title: 'MBK Parent Portal',
         debugShowCheckedModeBanner: false,
-        theme: lightTheme(),
-        darkTheme: darkTheme(),
+        theme: auroraLightTheme(),
+        darkTheme: auroraDarkTheme(),
         themeMode: ThemeMode.system,
         home: const SplashScreen(),
       ),

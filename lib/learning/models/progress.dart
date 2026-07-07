@@ -5,6 +5,7 @@ class LessonProgress {
   final int totalAttempts;
   final int correctCount;
   final int totalActivities;
+  final int timeSpentInSeconds;
   final DateTime? lastAttemptedAt;
   final DateTime? completedAt;
 
@@ -15,6 +16,7 @@ class LessonProgress {
     this.totalAttempts = 0,
     this.correctCount = 0,
     this.totalActivities = 0,
+    this.timeSpentInSeconds = 0,
     this.lastAttemptedAt,
     this.completedAt,
   });
@@ -25,6 +27,7 @@ class LessonProgress {
     int? totalAttempts,
     int? correctCount,
     int? totalActivities,
+    int? timeSpentInSeconds,
     DateTime? lastAttemptedAt,
     DateTime? completedAt,
   }) {
@@ -35,6 +38,7 @@ class LessonProgress {
       totalAttempts: totalAttempts ?? this.totalAttempts,
       correctCount: correctCount ?? this.correctCount,
       totalActivities: totalActivities ?? this.totalActivities,
+      timeSpentInSeconds: timeSpentInSeconds ?? this.timeSpentInSeconds,
       lastAttemptedAt: lastAttemptedAt ?? this.lastAttemptedAt,
       completedAt: completedAt ?? this.completedAt,
     );
@@ -47,6 +51,7 @@ class LessonProgress {
         'totalAttempts': totalAttempts,
         'correctCount': correctCount,
         'totalActivities': totalActivities,
+        'timeSpentInSeconds': timeSpentInSeconds,
         'lastAttemptedAt': lastAttemptedAt?.toIso8601String(),
         'completedAt': completedAt?.toIso8601String(),
       };
@@ -58,6 +63,7 @@ class LessonProgress {
         totalAttempts: json['totalAttempts'] as int? ?? 0,
         correctCount: json['correctCount'] as int? ?? 0,
         totalActivities: json['totalActivities'] as int? ?? 0,
+        timeSpentInSeconds: json['timeSpentInSeconds'] as int? ?? 0,
         lastAttemptedAt: json['lastAttemptedAt'] != null
             ? DateTime.tryParse(json['lastAttemptedAt'] as String)
             : null,

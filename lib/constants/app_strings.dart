@@ -25,5 +25,20 @@ class AppStrings {
   static const String total = 'Total';
   static String positionLabel(int position, String ordinal) => 'Position: $position$ordinal';
   
+  static const String ordinalFirst = 'st';
+  static const String ordinalSecond = 'nd';
+  static const String ordinalThird = 'rd';
+  static const String ordinalDefault = 'th';
+  
   static const String loadingResults = 'Loading results...';
+  static const String unknown = '?';
+
+  static const String gradeAPlus = 'A+';
+  static const String gradeA = 'A';
+  static const String gradeBPlus = 'B+';
+  static const String gradeB = 'B';
+  static const String gradeCPlus = 'C+';
+  static const String gradeC = 'C';
+  static const String gradeD = 'D';
+  static const String gradeF = 'F';
 }

@@ -227,8 +227,8 @@ class QuestionGenerator {
         final cents = _coin() ? 0 : _r(1, 3) * 25;
         return _mc(id,
             'You have $dollars dollar${dollars > 1 ? 's' : ''} and ${cents ~/ 25} quarter${cents ~/ 25 > 1 ? 's' : ''}. How much money do you have?',
-            '\$${dollars}.${cents.toString().padLeft(2, '0')}',
-            ['\$${dollars}.${cents.toString().padLeft(2, '0')}',
+'\$$dollars.${cents.toString().padLeft(2, '0')}',
+             ['\$$dollars.${cents.toString().padLeft(2, '0')}',
              '\$${_r(1, 10)}.${_r(0, 99).toString().padLeft(2, '0')}',
              '\$${_r(1, 10)}.${_r(0, 99).toString().padLeft(2, '0')}',
              '\$${_r(1, 10)}.${_r(0, 99).toString().padLeft(2, '0')}'],
@@ -248,7 +248,7 @@ class QuestionGenerator {
       case MathTopic.fractions: {
         final den = _r(2, 4), num = _r(1, den - 1);
         return _mc(id, 'What fraction is shaded? (${'■' * num}${'□' * (den - num)})',
-            '$num/$den', ['$num/$den', '${num + 1}/$den', '$num/${den + 1}', '${num}/${den * 2}'], t, d, 2);
+            '$num/$den', ['$num/$den', '${num + 1}/$den', '$num/${den + 1}', '$num/${den * 2}'], t, d, 2);
       }
       case MathTopic.patterns: {
         return _mc(id, 'What is the next number? 2, 4, 6, 8, __',
@@ -284,7 +284,7 @@ class QuestionGenerator {
             '$h:${m.toString().padLeft(2, '0')}',
             ['$h:${m.toString().padLeft(2, '0')}',
              '${h + 1}:${m.toString().padLeft(2, '0')}',
-             '$h:${(m + 15) % 60}', '${h}:00'], t, d, 3);
+             '$h:${(m + 15) % 60}', '$h:00'], t, d, 3);
       }
       case MathTopic.measurement: {
         final kg = _r(1, 10);
@@ -300,8 +300,8 @@ class QuestionGenerator {
       }
       case MathTopic.decimals: {
         final n = _r(1, 9), d3 = _r(1, 9);
-        return _mc(id, 'What is $n.$d3 as a fraction?', '$n ${d3}/10',
-            ['$n ${d3}/10', '$n/${d3 * 10}', '${n * 10 + d3}/10', '${n * 10 + d3}/100'], t, d, 3);
+        return _mc(id, 'What is $n.$d3 as a fraction?', '$n $d3/10',
+            ['$n $d3/10', '$n/${d3 * 10}', '${n * 10 + d3}/10', '${n * 10 + d3}/100'], t, d, 3);
       }
       case MathTopic.placeValue: {
         final n = _r(100, 999);
@@ -332,7 +332,7 @@ class QuestionGenerator {
         final num1 = _r(1, 5), den = _r(6, 12), num2 = _r(1, 5);
         final sumNum = num1 + num2;
         return _mc(id, '$num1/$den + $num2/$den = ?', '$sumNum/$den',
-            ['$sumNum/$den', '${sumNum}/${den * 2}', '${num1 * num2}/$den', '${num2}/${num1 + den}'], t, d, 4,
+            ['$sumNum/$den', '$sumNum/${den * 2}', '${num1 * num2}/$den', '$num2/${num1 + den}'], t, d, 4,
             explanation: 'Add numerators, keep denominator the same');
       }
       case MathTopic.decimals: {
@@ -357,10 +357,10 @@ class QuestionGenerator {
       case MathTopic.money: {
         final d4 = _r(1, 10), c = _r(1, 99);
         final change = 100 - c;
-        return _mc(id, 'You buy an item for \$${d4}.${c.toString().padLeft(2, '0')} and pay with \$${d4 + 1}. What is your change?',
+        return _mc(id, 'You buy an item for \$d4.${c.toString().padLeft(2, '0')} and pay with \$${d4 + 1}. What is your change?',
             '\$0.${change.toString().padLeft(2, '0')}',
             ['\$0.${change.toString().padLeft(2, '0')}',
-             '\$${c / 100}', '\$${d4}.${c.toString().padLeft(2, '0')}', '\$1.00'], t, d, 4);
+             '\$${c / 100}', '\$d4.${c.toString().padLeft(2, '0')}', '\$1.00'], t, d, 4);
       }
       case MathTopic.time: {
         final h = _r(1, 11), m = _coin() ? 10 : 20;

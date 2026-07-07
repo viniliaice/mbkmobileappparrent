@@ -7,9 +7,13 @@ import '../providers/announcement_provider.dart';
 import '../providers/message_provider.dart';
 import '../models/message.dart';
 import '../models/announcement.dart';
+import '../models/student.dart';
 import 'login_screen.dart';
 import 'announcements_screen.dart';
 import 'messages_screen.dart';
+import '../learning/screens/hub_screen.dart';
+import '../theme/aurora_background.dart';
+import '../widgets/aurora_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -22,7 +26,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   StreamSubscription<AppMessage>? _newMessageSub;
   late AnimationController _fadeController;
-  late AnimationController _slideController;
   late AnimationController _staggerController;
 
   @override
@@ -30,19 +33,13 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _slideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 800),
     );
     _staggerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000),
     );
-
     _fadeController.forward();
-    _slideController.forward();
     _staggerController.forward();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -52,9 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (auth.user != null) {
         sp.loadChildren(auth.user!.id).then((_) {
           final classes = sp.children.map((c) => c.className).toSet().toList();
-          if (classes.isNotEmpty) {
-            ap.loadAnnouncements(classes);
-          }
+          if (classes.isNotEmpty) ap.loadAnnouncements(classes);
         });
         _setupRealtime(auth.user!.id);
       }
@@ -64,20 +59,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _setupRealtime(String userId) {
     final mp = context.read<MessageProvider>();
     mp.subscribeToRealtime(userId);
-
     _newMessageSub = mp.newMessages.listen((message) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('New message from ${message.senderName}: ${message.subject}'),
-          action: SnackBarAction(
-            label: 'View',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MessagesScreen()),
-              );
-            },
-          ),
+          action: SnackBarAction(label: 'View', onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MessagesScreen()));
+          }),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -91,7 +80,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   void dispose() {
     _newMessageSub?.cancel();
     _fadeController.dispose();
-    _slideController.dispose();
     _staggerController.dispose();
     super.dispose();
   }
@@ -99,166 +87,183 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final auth = context.watch<AuthProvider>();
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
-      extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(theme, colorScheme, auth),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          if (auth.user != null) {
-            final sp = context.read<StudentProvider>();
-            final ap = context.read<AnnouncementProvider>();
-            await sp.loadChildren(auth.user!.id);
-            final classes = sp.children.map((c) => c.className).toSet().toList();
-            if (classes.isNotEmpty) {
-              ap.loadAnnouncements(classes);
+      body: AuroraBackground(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            if (auth.user != null) {
+              final sp = context.read<StudentProvider>();
+              final ap = context.read<AnnouncementProvider>();
+              await sp.loadChildren(auth.user!.id);
+              final classes = sp.children.map((c) => c.className).toSet().toList();
+              if (classes.isNotEmpty) ap.loadAnnouncements(classes);
             }
-          }
-        },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(child: SizedBox(height: kToolbarHeight + 8)),
-            SliverToBoxAdapter(
-              child: FadeTransition(
-                opacity: _fadeController,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.15),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic)),
-                  child: _buildWelcomeSection(theme, colorScheme, auth, isDark),
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: FadeTransition(
+                  opacity: _fadeController,
+                  child: _buildWelcomeSection(theme, auth),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(child: const SizedBox(height: 8)),
-            SliverToBoxAdapter(
-              child: FadeTransition(
-                opacity: CurvedAnimation(parent: _staggerController, curve: const Interval(0.4, 1.0)),
-                child: _buildAnnouncements(theme),
+              SliverToBoxAdapter(
+                child: FadeTransition(
+                  opacity: CurvedAnimation(parent: _staggerController, curve: const Interval(0.0, 0.5)),
+                  child: _buildStudentCards(theme),
+                ),
               ),
-            ),
-            SliverToBoxAdapter(child: const SizedBox(height: 32)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(ThemeData theme, ColorScheme colorScheme, dynamic auth) {
-    return AppBar(
-      title: const Text(
-        'MBKIS Parent Portal',
-        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17, letterSpacing: -0.3),
-      ),
-      centerTitle: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_none_rounded, size: 24),
-          tooltip: 'Announcements',
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const AnnouncementsScreen()),
+              SliverToBoxAdapter(
+                child: FadeTransition(
+                  opacity: CurvedAnimation(parent: _staggerController, curve: const Interval(0.2, 0.7)),
+                  child: _buildQuickActions(theme),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: FadeTransition(
+                  opacity: CurvedAnimation(parent: _staggerController, curve: const Interval(0.4, 1.0)),
+                  child: _buildAnnouncements(theme),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.logout_rounded, size: 24),
-          tooltip: 'Logout',
-          onPressed: () async {
-            final mp = context.read<MessageProvider>();
-            final navigator = Navigator.of(context);
-            await auth.logout();
-            mp.unsubscribeFromRealtime();
-            if (!context.mounted) return;
-            navigator.pushReplacement(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-            );
-          },
-        ),
-        const SizedBox(width: 4),
-      ],
+      ),
     );
   }
 
-  Widget _buildWelcomeSection(ThemeData theme, ColorScheme colorScheme, dynamic auth, bool isDark) {
+  Widget _buildWelcomeSection(ThemeData theme, dynamic auth) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [const Color(0xFF1C1C1E), const Color(0xFF141416)]
-                : [Colors.white, const Color(0xFFFAFAFA)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _timeBasedGreeting(),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
+          const SizedBox(height: 4),
+          Text(
+            auth.user?.name ?? 'Parent',
+            style: theme.textTheme.displayMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+            ),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.04),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-              spreadRadius: -4,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _timeBasedGreeting(),
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              auth.user?.name ?? 'Parent',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-                fontSize: 28,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  String _timeBasedGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+  Widget _buildStudentCards(ThemeData theme) {
+    final students = context.watch<StudentProvider>().children;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (students.isEmpty)
+            AuroraCard(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Icon(Icons.child_care_outlined, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                  const SizedBox(width: 12),
+                  Text('No children linked yet', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                ],
+              ),
+            )
+          else
+            ...students.map((student) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _StudentCard(student: student),
+            )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text('Quick Actions', style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700, letterSpacing: -0.3,
+            )),
+          ),
+          Row(
+            children: [
+              Expanded(child: _QuickActionCard(
+                icon: Icons.auto_stories_rounded,
+                label: 'Learning Hub',
+                gradient: const [Color(0xFF448AFF), Color(0xFF00BCD4)],
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LearningHubScreen())),
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: _QuickActionCard(
+                icon: Icons.mail_outline_rounded,
+                label: 'Messages',
+                gradient: const [Color(0xFF9B59B6), Color(0xFFB39DDB)],
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MessagesScreen())),
+              )),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _QuickActionCard(
+                icon: Icons.campaign_rounded,
+                label: 'Announcements',
+                gradient: const [Color(0xFF00BCD4), Color(0xFF2ECC71)],
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnnouncementsScreen())),
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: _QuickActionCard(
+                icon: Icons.logout_rounded,
+                label: 'Sign Out',
+                gradient: const [Color(0xFFE74C3C), Color(0xFF9B59B6)],
+                onTap: () async {
+                  final mp = context.read<MessageProvider>();
+                  final auth = context.read<AuthProvider>();
+                  final navigator = Navigator.of(context);
+                  await auth.logout();
+                  mp.unsubscribeFromRealtime();
+                  if (!context.mounted) return;
+                  navigator.pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+                },
+              )),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildAnnouncements(ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _sectionHeader('Announcements', theme),
+              Text('Announcements', style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700, letterSpacing: -0.3,
+              )),
               TextButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AnnouncementsScreen()),
-                ),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnnouncementsScreen())),
                 icon: const Icon(Icons.arrow_forward_rounded, size: 16),
                 label: const Text('View All'),
               ),
@@ -268,22 +273,16 @@ class _DashboardScreenState extends State<DashboardScreen>
           Consumer<AnnouncementProvider>(
             builder: (context, ap, _) {
               if (ap.loading && ap.announcements.isEmpty) {
-                return _buildShimmerAnnouncements(theme);
+                return _buildShimmer();
               }
               if (ap.announcements.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: theme.brightness == Brightness.dark ? const Color(0xFF1C1C1E) : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                return AuroraCard(
+                  padding: const EdgeInsets.all(20),
                   child: Row(
                     children: [
-                      Icon(Icons.campaign_outlined,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                      Icon(Icons.campaign_outlined, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                       const SizedBox(width: 12),
-                      Text('No announcements yet',
-                          style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                      Text('No announcements yet', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 );
@@ -301,27 +300,111 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildShimmerAnnouncements(ThemeData theme) {
+  Widget _buildShimmer() {
     return Column(
-      children: List.generate(2, (_) => Container(
-        height: 80,
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: theme.brightness == Brightness.dark ? const Color(0xFF1C1C1E) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+      children: List.generate(2, (_) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: AuroraCard(
+          height: 80,
+          padding: EdgeInsets.zero,
+          child: ShimmerLoading(),
         ),
-        child: const ShimmerLoading(),
       )),
     );
   }
 
-  Widget _sectionHeader(String title, ThemeData theme) {
-    return Text(
-      title,
-      style: theme.textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
-        fontSize: 22,
+  String _timeBasedGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+}
+
+class _StudentCard extends StatelessWidget {
+  final Student student;
+  const _StudentCard({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final initials = student.name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join();
+    return AuroraCard(
+      hasGlow: true,
+      accentColor: const Color(0xFF448AFF),
+      onTap: () {},
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF448AFF), Color(0xFF00BCD4)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Center(
+              child: Text(initials, style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18,
+              )),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(student.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(student.className, style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                )),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurfaceVariant),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final List<Color> gradient;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.label,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          boxShadow: [
+            BoxShadow(color: gradient.first.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white, size: 28),
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+          ],
+        ),
       ),
     );
   }
@@ -334,49 +417,39 @@ class _AnnouncementTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.03),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AuroraCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.campaign_rounded, size: 20, color: theme.colorScheme.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    announcement.className.isNotEmpty ? 'Class ${announcement.className}' : 'Announcement',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
+                      color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(announcement.message, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                ],
+              ),
+            ),
+          ],
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.campaign_rounded, size: 20, color: theme.colorScheme.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  announcement.className.isNotEmpty ? 'Class ${announcement.className}' : 'Announcement',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  announcement.message,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -392,7 +465,11 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   @override
-  void initState() { super.initState(); _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true); }
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+      ..repeat(reverse: true);
+  }
   @override
   void dispose() { _controller.dispose(); super.dispose(); }
   @override
@@ -406,9 +483,10 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
               colors: isDark
-                  ? [const Color(0xFF1C1C1E), const Color(0xFF2A2A2E), const Color(0xFF1C1C1E)]
-                  : [const Color(0xFFFAFAFA), const Color(0xFFE8E8ED), const Color(0xFFFAFAFA)],
-              stops: [_controller.value - 0.3, _controller.value, _controller.value + 0.3].map((v) => v.clamp(0.0, 1.0)).toList(),
+                  ? [const Color(0xFF141D3A), const Color(0xFF1A2A5C), const Color(0xFF141D3A)]
+                  : [const Color(0xFFE8ECF4), const Color(0xFFF0F4FF), const Color(0xFFE8ECF4)],
+              stops: [_controller.value - 0.3, _controller.value, _controller.value + 0.3]
+                  .map((v) => v.clamp(0.0, 1.0)).toList(),
               begin: Alignment(-1.0, 0.0), end: Alignment(1.0, 0.0),
             ),
           ),

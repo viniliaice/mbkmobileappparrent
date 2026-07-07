@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import '../models/attendance_record.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/student_provider.dart';
+import '../theme/aurora_background.dart';
+import '../widgets/aurora_card.dart';
+import '../widgets/responsive_content.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -33,95 +36,99 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Attendance')),
-      body: Consumer<AttendanceProvider>(
-        builder: (context, ap, _) {
-          if (ap.loading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (ap.error != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, size: 48, color: colorScheme.error),
-                    const SizedBox(height: 16),
-                    Text(ap.error!),
-                  ],
+      body: AuroraBackground(
+        child: Consumer<AttendanceProvider>(
+          builder: (context, ap, _) {
+            if (ap.loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (ap.error != null) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, size: 48, color: colorScheme.error),
+                      const SizedBox(height: 16),
+                      Text(ap.error!),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }
+              );
+            }
 
-          final todayRec = ap.todayRecord;
-          final total = ap.summary.values.fold(0, (a, b) => a + b);
-          final recordCount = ap.records.length;
-          final headerCount = 3;
-          final totalItems = headerCount + recordCount;
+            final todayRec = ap.todayRecord;
+            final total = ap.summary.values.fold(0, (a, b) => a + b);
+            final recordCount = ap.records.length;
+            final headerCount = 3;
+            final totalItems = headerCount + recordCount;
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              final sp = context.read<StudentProvider>();
-              final ids = sp.children.map((c) => c.id).toList();
-              if (ids.isNotEmpty) {
-                await ap.loadAttendance(ids);
-              }
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: totalItems,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return _buildTodayCard(theme, colorScheme, todayRec);
-                }
-                if (index == 1) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 16, bottom: 16),
-                    child: _buildStatsCard(theme, colorScheme, ap, total),
-                  );
-                }
-                if (index == 2) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text('History', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                  );
-                }
-                final r = ap.records[index - headerCount];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        _statusIcon(r.status, colorScheme),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            return ResponsiveContent(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  final sp = context.read<StudentProvider>();
+                  final ids = sp.children.map((c) => c.id).toList();
+                  if (ids.isNotEmpty) {
+                    await ap.loadAttendance(ids);
+                  }
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: totalItems,
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return _buildTodayCard(theme, colorScheme, todayRec);
+                    }
+                    if (index == 1) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 16, bottom: 16),
+                        child: _buildStatsCard(theme, colorScheme, ap, total),
+                      );
+                    }
+                    if (index == 2) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text('History', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      );
+                    }
+                    final r = ap.records[index - headerCount];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: AuroraCard(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
                             children: [
-                              Text(df.format(r.date), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                              Text(r.className, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                              _statusIcon(r.status, colorScheme),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(df.format(r.date), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                    Text(r.className, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                                  ],
+                                ),
+                              ),
+                              _statusBadge(r.status, colorScheme),
                             ],
                           ),
                         ),
-                        _statusBadge(r.status, colorScheme),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _buildTodayCard(ThemeData theme, ColorScheme colorScheme, AttendanceRecord? todayRec) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    return AuroraCard(
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -158,8 +165,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildStatsCard(ThemeData theme, ColorScheme colorScheme, AttendanceProvider ap, int total) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    return AuroraCard(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

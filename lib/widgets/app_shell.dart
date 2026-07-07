@@ -10,6 +10,12 @@ import '../learning/screens/hub_screen.dart';
 import '../math/screens/topic_explorer_screen.dart';
 import '../math/screens/speed_challenge_screen.dart';
 import '../math/screens/math_hub_screen.dart';
+import '../theme/aurora_background.dart';
+import '../widgets/aurora_card.dart';
+import 'aurora_nav.dart';
+import 'aurora_nav_rail.dart';
+import 'responsive.dart';
+import 'responsive_content.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -25,6 +31,49 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= desktopBreakpoint) {
+          return _buildDesktop();
+        }
+        return _buildMobile();
+      },
+    );
+  }
+
+  Widget _buildDesktop() {
+    return Scaffold(
+      body: Row(
+        children: [
+          AuroraNavRail(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: _onTap,
+            items: const [
+              AuroraRailItem(icon: Icons.home_rounded, label: 'Home'),
+              AuroraRailItem(icon: Icons.mail_outline_rounded, label: 'Messages'),
+              AuroraRailItem(icon: Icons.auto_stories_rounded, label: 'Learning'),
+              AuroraRailItem(icon: Icons.bar_chart_rounded, label: 'Results'),
+            ],
+          ),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: IndexedStack(index: _currentIndex, children: const [
+                  DashboardScreen(),
+                  MessagesScreen(),
+                  _LearningScreen(),
+                  _ResultsScreen(),
+                ]),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobile() {
     return Scaffold(
       body: Column(
         children: [
@@ -38,33 +87,14 @@ class _AppShellState extends State<AppShell> {
           ),
           SafeArea(
             top: false,
-            child: NavigationBar(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: _onTap,
-              animationDuration: const Duration(milliseconds: 300),
-              labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-              height: 60,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home_rounded),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.email_outlined),
-                  selectedIcon: Icon(Icons.email_rounded),
-                  label: 'Messages',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.auto_stories_outlined),
-                  selectedIcon: Icon(Icons.auto_stories_rounded),
-                  label: 'Learning',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  selectedIcon: Icon(Icons.bar_chart_rounded),
-                  label: 'Results',
-                ),
+            child: AuroraNavBar(
+              currentIndex: _currentIndex,
+              onTap: _onTap,
+              items: const [
+                AuroraNavItem(icon: Icons.home_rounded, label: 'Home'),
+                AuroraNavItem(icon: Icons.mail_outline_rounded, label: 'Messages'),
+                AuroraNavItem(icon: Icons.auto_stories_rounded, label: 'Learning'),
+                AuroraNavItem(icon: Icons.bar_chart_rounded, label: 'Results'),
               ],
             ),
           ),
@@ -120,63 +150,80 @@ class _LearningScreenState extends State<_LearningScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
-      appBar: AppBar(
-        title: const Text('Learning', style: TextStyle(fontWeight: FontWeight.w600)),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+    final desktop = isDesktop(context);
+    final featureCards = <Widget>[
+      _FeatureCard(
+        icon: Icons.auto_stories_rounded,
+        title: 'Learning Hub',
+        subtitle: 'Browse all subjects and lessons',
+        color: const Color(0xFF6C5CE7),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LearningHubScreen()),
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Text('Explore and practice',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-          ),
-          _FeatureCard(
-            icon: Icons.auto_stories_rounded,
-            title: 'Learning Hub',
-            subtitle: 'Browse all subjects and lessons',
-            color: const Color(0xFF6C5CE7),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const LearningHubScreen()),
+      _FeatureCard(
+        icon: Icons.calculate_rounded,
+        title: 'Topic Explorer',
+        subtitle: 'Pick a math topic to practice',
+        color: const Color(0xFFFF6B6B),
+        onTap: () => _pickChildAndGo(
+          (child) => TopicExplorerScreen(student: child, grade: _gradeForChild(child)),
+        ),
+      ),
+      _FeatureCard(
+        icon: Icons.flash_on_rounded,
+        title: 'Speed Challenge',
+        subtitle: 'Race the clock with quick math',
+        color: Colors.amber.shade700,
+        onTap: () => _pickChildAndGo(
+          (child) => SpeedChallengeScreen(student: child, grade: _gradeForChild(child)),
+        ),
+      ),
+      _FeatureCard(
+        icon: Icons.functions_rounded,
+        title: 'Math Hub',
+        subtitle: 'Math overview and progress',
+        color: const Color(0xFF2D9CDB),
+        onTap: () => _pickChildAndGo(
+          (child) => MathHubScreen(student: child),
+        ),
+      ),
+    ];
+
+    return Scaffold(
+      body: AuroraBackground(
+        child: SafeArea(
+          bottom: false,
+          child: ResponsiveContent(
+            child: ListView(
+              padding: desktop
+                  ? const EdgeInsets.fromLTRB(0, 12, 0, 40)
+                  : const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text('Explore and practice',
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+                if (desktop) ...[
+                  // 2-column grid on desktop
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 3.2,
+                    children: featureCards,
+                  ),
+                ] else ...[
+                  // Single-column list on mobile
+                  ...featureCards.expand((w) => [w, const SizedBox(height: 12)]).toList()..removeLast(),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          _FeatureCard(
-            icon: Icons.calculate_rounded,
-            title: 'Topic Explorer',
-            subtitle: 'Pick a math topic to practice',
-            color: const Color(0xFFFF6B6B),
-            onTap: () => _pickChildAndGo(
-              (child) => TopicExplorerScreen(student: child, grade: _gradeForChild(child)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _FeatureCard(
-            icon: Icons.flash_on_rounded,
-            title: 'Speed Challenge',
-            subtitle: 'Race the clock with quick math',
-            color: Colors.amber.shade700,
-            onTap: () => _pickChildAndGo(
-              (child) => SpeedChallengeScreen(student: child, grade: _gradeForChild(child)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _FeatureCard(
-            icon: Icons.functions_rounded,
-            title: 'Math Hub',
-            subtitle: 'Math overview and progress',
-            color: const Color(0xFF2D9CDB),
-            onTap: () => _pickChildAndGo(
-              (child) => MathHubScreen(student: child),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -200,58 +247,38 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.03),
+    return AuroraCard(
+      padding: const EdgeInsets.all(18),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.03),
-                blurRadius: 16, offset: const Offset(0, 4), spreadRadius: -4,
-              ),
-            ],
+            child: Icon(icon, color: color, size: 26),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: isDark ? 0.2 : 0.12),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, color: color, size: 26),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: theme.colorScheme.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-            ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
           ),
-        ),
+          Icon(Icons.chevron_right_rounded,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+        ],
       ),
     );
   }
@@ -342,134 +369,132 @@ class _ResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+    final desktop = isDesktop(context);
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
-      appBar: AppBar(
-        title: const Text('Student Results', style: TextStyle(fontWeight: FontWeight.w600)),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      body: AuroraBackground(
+        child: SafeArea(
+          bottom: false,
+          child: Consumer<StudentProvider>(
+            builder: (context, sp, _) {
+              if (sp.loadingChildren) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (sp.children.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.child_care_outlined, size: 64,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                      const SizedBox(height: 16),
+                      Text('No Children Linked',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Text('Add a child to view their results',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                );
+              }
+              return ResponsiveContent(
+                child: ListView(
+                  padding: desktop
+                      ? const EdgeInsets.fromLTRB(0, 12, 0, 24)
+                      : const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text('Select a child to view their academic results',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: colorScheme.onSurfaceVariant)),
+                    ),
+                    if (desktop) ...[
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: sp.children.map((student) => SizedBox(
+                          width: 440,
+                          child: _buildStudentResultCard(
+                              context, theme, colorScheme, student),
+                        )).toList(),
+                      ),
+                    ] else ...[
+                      ...sp.children.map((student) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildStudentResultCard(
+                            context, theme, colorScheme, student),
+                      )),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
       ),
-      body: Consumer<StudentProvider>(
-        builder: (context, sp, _) {
-          if (sp.loadingChildren) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (sp.children.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.child_care_outlined, size: 64,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                  const SizedBox(height: 16),
-                  Text('No Children Linked',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text('Add a child to view their results',
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+    );
+  }
+
+  Widget _buildStudentResultCard(
+      BuildContext context, ThemeData theme, ColorScheme colorScheme, dynamic student) {
+    return AuroraCard(
+      padding: const EdgeInsets.all(18),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+            builder: (_) => AcademicResultsScreen(student: student)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  colorScheme.primary,
+                  colorScheme.primary.withValues(alpha: 0.7)
                 ],
               ),
-            );
-          }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text('Select a child to view their academic results',
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              ),
-              ...sp.children.map((student) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => AcademicResultsScreen(student: student)),
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.06)
-                              : Colors.black.withValues(alpha: 0.03),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark
-                                ? Colors.black.withValues(alpha: 0.2)
-                                : Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 16, offset: const Offset(0, 4),
-                            spreadRadius: -4,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 56, height: 56,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  theme.colorScheme.primary,
-                                  theme.colorScheme.primary.withValues(alpha: 0.7)
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Center(
-                              child: Text(student.name[0].toUpperCase(),
-                                  style: const TextStyle(color: Colors.white,
-                                      fontWeight: FontWeight.w800, fontSize: 22)),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(student.name,
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.class_rounded, size: 14,
-                                        color: theme.colorScheme.onSurfaceVariant),
-                                    const SizedBox(width: 4),
-                                    Text('Class ${student.className}',
-                                        style: TextStyle(
-                                            color: theme.colorScheme.onSurfaceVariant,
-                                            fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Icon(Icons.chevron_right_rounded,
-                              color: theme.colorScheme.onSurfaceVariant
-                                  .withValues(alpha: 0.5),
-                              size: 22),
-                        ],
-                      ),
-                    ),
-                  ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Text(student.name[0].toUpperCase(),
+                  style: const TextStyle(color: Colors.white,
+                      fontWeight: FontWeight.w800, fontSize: 22)),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(student.name,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.class_rounded, size: 14,
+                        color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Text('Class ${student.className}',
+                        style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500)),
+                  ],
                 ),
-              )),
-            ],
-          );
-        },
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Icon(Icons.chevron_right_rounded,
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              size: 22),
+        ],
       ),
     );
   }

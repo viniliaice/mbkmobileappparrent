@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/student.dart';
+import '../../theme/aurora_background.dart';
 import '../models/math_question.dart';
 import '../models/math_progress.dart';
 import '../providers/math_provider.dart';
 import '../widgets/lesson_mode.dart';
+import '../../widgets/responsive_content.dart';
 import 'lesson_screen.dart';
 import 'speed_challenge_screen.dart';
 
@@ -106,7 +108,6 @@ class _TopicExplorerScreenState extends State<TopicExplorerScreen> {
     final topics = MathTopic.values;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F23) : const Color(0xFFF8FAFF),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text('Grade ${widget.grade} • ${widget.student.name}',
@@ -123,9 +124,11 @@ class _TopicExplorerScreenState extends State<TopicExplorerScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      body: AuroraBackground(
+        child: SafeArea(
+          child: ResponsiveContent(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             _buildHero(theme, colorScheme, isDark, mp),
             const SizedBox(height: 16),
@@ -165,6 +168,8 @@ class _TopicExplorerScreenState extends State<TopicExplorerScreen> {
             ),
           ],
         ),
+      ),
+      ),
       ),
     );
   }

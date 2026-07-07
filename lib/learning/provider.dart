@@ -134,8 +134,14 @@ class LearningProvider extends ChangeNotifier {
     await prefs.setInt('learning_streak_count', _currentStreak);
   }
 
+  int getTotalTimeSpent(String studentId) {
+    if (_progressByStudent[studentId] == null) return 0;
+    return _progressByStudent[studentId]!.values
+        .fold<int>(0, (sum, p) => sum + p.timeSpentInSeconds);
+  }
+
   Future<Achievement?> completeLesson(
-      String studentId, String lessonId, int correctCount, int totalActivities) async {
+      String studentId, String lessonId, int correctCount, int totalActivities, {int timeSpentInSeconds = 0}) async {
     _progressByStudent.putIfAbsent(studentId, () => {});
     final existing = _progressByStudent[studentId]![lessonId];
     _xpByStudent.putIfAbsent(studentId, () => 0);
@@ -153,6 +159,7 @@ class LearningProvider extends ChangeNotifier {
       totalAttempts: (existing?.totalAttempts ?? 0) + 1,
       correctCount: (existing?.correctCount ?? 0) + correctCount,
       totalActivities: (existing?.totalActivities ?? 0) + totalActivities,
+      timeSpentInSeconds: (existing?.timeSpentInSeconds ?? 0) + timeSpentInSeconds,
       lastAttemptedAt: DateTime.now(),
       completedAt: DateTime.now(),
     );

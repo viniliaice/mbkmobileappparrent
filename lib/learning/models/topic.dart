@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'lesson.dart';
+import 'vocab_word.dart';
+import 'geo_shape.dart';
 
 class LearningTopic {
   final String id;
@@ -30,6 +32,8 @@ class LearningLesson {
   final int xpReward;
   final String badgeName;
   final String? badgeIcon;
+  final List<VocabWord>? vocabWords;
+  final List<ShapeIntro>? shapeIntros;
 
   const LearningLesson({
     required this.id,
@@ -40,5 +44,8 @@ class LearningLesson {
     this.xpReward = 50,
     this.badgeName = '',
     this.badgeIcon,
+    this.vocabWords,
+    this.shapeIntros,
   });
 }
+

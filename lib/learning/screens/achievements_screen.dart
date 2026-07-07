@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../theme/aurora_background.dart';
 import '../provider.dart';
 import '../widgets/badge.dart';
+import '../../widgets/responsive_content.dart';
 
 class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({super.key});
@@ -13,13 +15,15 @@ class AchievementsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Achievements')),
-      body: Consumer<LearningProvider>(
-        builder: (context, lp, _) {
-          if (!lp.loaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final achievements = LearningProvider.achievements;
-          return ListView.builder(
+      body: AuroraBackground(
+        child: Consumer<LearningProvider>(
+          builder: (context, lp, _) {
+            if (!lp.loaded) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final achievements = LearningProvider.achievements;
+            return ResponsiveContent(
+              child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: achievements.length + 2,
             itemBuilder: (context, index) {
@@ -81,10 +85,12 @@ class AchievementsScreen extends StatelessWidget {
                 ),
               );
             },
+            ),
           );
         },
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildHeader(
